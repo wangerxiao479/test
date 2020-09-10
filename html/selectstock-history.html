@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>关于我们</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet">
+    <link href="../css/index.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/quotation.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            var id = api.pageParam.id;
+            showLoading();
+            sendGet(ServicesConifg.SelectStocks.IntelliSecPool + "?id=" + id, function(succ) {
+                var data = JSON.parse(succ);
+                if (data.ret == 0) {
+                    var content = JSON.parse(data.content);
+                    var listhtml = "";
+                    var sortlist = content.vtDaySec.sort(function(a, b) {
+                        return new Date(b.sOptime.replace("-", "/")) - new Date(a.sOptime.replace("-", "/"));
+                    });
+                    $.each(content.vtDaySec, function(i, e) {
+                        listhtml += '<tr class="smart-table-date">';
+                        listhtml += '<td colspan="4">' + e.sOptime;
+                        listhtml += '<span>入选';
+                        listhtml += '<i class="red">' + e.vtSec.length + '</i>只</span>';
+                        listhtml += '</td>';
+                        listhtml += '</tr>';
+                        $.each(e.vtSec, function(ii, ee) {
+                            listhtml += '<tr>';
+                            listhtml += '<td class="smart-table-name">' + '<a onclick="goaddStrategy(\'' + ee.sDtCode.substring(4) + '\')">' + ee.sChnName;
+                            listhtml += '<span>' + ee.sDtCode.substring(4) + '</span>';
+                            listhtml += '</a></td>';
+                            listhtml += '<td>' + ee.fSelectedPrice + '</td>';
+                            if (ee.fFirstIncrease >= 0) {
+                                listhtml += '<td class="red">+' + (ee.fFirstIncrease * 100).toFixed(2) + '%</td>';
+                            } else {
+                                listhtml += '<td class="green">' + (ee.fFirstIncrease * 100).toFixed(2) + '%</td>';
+                            }
+                            if (ee.fMaxIncrease >= 0) {
+                                listhtml += '<td class="red">+' + (ee.fMaxIncrease * 100).toFixed(2) + '%</td>';
+                            } else {
+                                listhtml += '<td class="green">' + (ee.fMaxIncrease * 100).toFixed(2) + '%</td>';
+                            }
+                            listhtml += '</tr>';
+                        });
+                    });
+                    $("#list").html(listhtml);
+                    closeLoading();
+                }
+            }, function(err) {
+                console.log(err);
+                closeLoading();
+            });
+        };
+
+        var goaddStrategy = function(code) {
+            api.openWin({
+                name: 'addStrategy',
+                url: 'addStrategy.html',
+                pageParam: {
+                    stockCode: code
+                }
+            });
+        }
+        var goTabHome = function() {
+            api.sendEvent({
+                name: 'goHome'
+            });
+            api.closeWin();
+        }
+        var goTabStrategy = function() {
+            api.sendEvent({
+                name: 'goStrategy'
+            });
+            api.closeWin();
+        }
+        var goTabSelfstock = function() {
+            api.sendEvent({
+                name: 'GetSelfStock'
+            });
+            api.sendEvent({
+                name: 'goSelfstock'
+            });
+            api.closeWin();
+        }
+        var goTabRank = function() {
+            api.sendEvent({
+                name: 'goRank'
+            });
+            api.closeWin();
+        }
+        var goTabMine = function() {
+            api.sendEvent({
+                name: 'goMine'
+            });
+            api.closeWin();
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- header -->
+    <div class="header" style="position:fixed;">
+        <a class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            历史推荐
+        </div>
+    </div>
+    <div style="height:3rem; clear:both;"></div>
+    <div class="alert-danger" onclick="javascript:$('.alert-danger').hide('slow');" style="width:94%; margin:.65rem 3%; color: #a94442; text-align: center; line-height: 1.6rem; font-size: .875rem; background-color: #f2dede; border-color: #ebccd1; border: 1px solid transparent; border-radius: 4px; padding: .2rem 0;">
+        <strong>提示！</strong>推荐股票为第三方机构模型结果，仅供参考，<br>不作为入市依据，据此入市，风险自担
+    </div>
+    <!-- 策略推荐个股 -->
+    <div class="smart-dehis">
+        <table class="smart-table smart-double">
+            <thead>
+                <tr>
+                    <td style="width:30%">股票名称</td>
+                    <td style="width:20%">入选价</td>
+                    <td style="width:20%">
+                        入选日
+                        <br>涨跌幅
+                    </td>
+                    <td style="width:20%">
+                        入选至今
+                        <br>最高涨幅
+                    </td>
+                </tr>
+            </thead>
+            <tbody id="list">
+
+            </tbody>
+        </table>
+
+    </div>
+
+    <!-- <div style="height:3.6rem; clear:both;"></div>
+    <div class="footer" id="footer">
+        <ul>
+            <li id="tab-home"><a href="#" onclick="goTabHome();"><i class="iconfont icon-shouye-shouye"></i><span>首页</span></a></li>
+            <li id="tab-strategy"><a href="#" onclick="goTabStrategy();"><i class="iconfont icon-celve101"></i><span>策略</span></a></li>
+            <li id="tab-selfstock"><a href="#" onclick="goTabSelfstock();"><i class="iconfont icon-xuanze"></i><span>自选</span></a></li>
+            <li id="tab-selectstock"><a href="#" onclick="goTabselectstock();"><i class="iconfont icon-xuangu"></i><span>选股</span></a></li>
+            <li id="tab-mine"><a href="#" onclick="goTabMine();"><i class="iconfont icon-me"></i><span>个人中心</span></a></li>
+        </ul>
+    </div> -->
+</body>
+
+</html>

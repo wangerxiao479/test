@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>编辑自选股</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+    <link href="../css/dragula.min.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../script/stick.js"></script>
+</head>
+
+<body>
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            编辑自选股
+        </div>
+    </div>
+    <!-- 自选股票列表 -->
+    <div class="wcp-second-box" style="margin-bottom:3.6rem;">
+        <ul class="stock-list stock-list-bot">
+            <li class="stock-list-tit">
+                <span class="dis-left">我的自选</span>
+                <span class="stock-list-tr">置顶</span>
+                <span class="stock-list-tr">拖动</span>
+            </li>
+            <div id="stock-list">
+            </div>
+        </ul>
+    </div>
+    <!-- 底部 -->
+    <div class="submit-edit stock-list-name">
+        <label>
+          <input id="allCheck" type="checkbox" name="all" class="p-checkbox">
+          <b class="checkbox-btn"></b>
+          <div class="submit-edit-wz">全部</div>
+      </label>
+        <button class="wcp-btn-orange wcp-btn" onclick="submit()">保存</button>
+        <button class="wcp-btn-red wcp-btn wcp-wc-btn" onclick="delSelfStock()">删除</button>
+    </div>
+    <script type="text/template" id="stocklistTemplate">
+        {{each List as value i}}
+        <li index="{{i}}" id="{{value.id}}">
+            <span class="stock-list-name">
+              <label>
+                  <input type="checkbox" name="edit" class="p-checkbox" value="{{value.id}}">
+                  <b class="checkbox-btn"></b>
+                  <div>{{value.stock_name}}<i class="stock-list-munb">{{value.stock_code}}</i></div>
+              </label>
+          </span>
+            <span class="stock-list-tr"><i class="iconfont icon-zhiding"></i></span>
+            <span class="stock-list-tr"><i class="iconfont icon-229icotuodong"></i></span>
+        </li>
+        {{/each}}
+    </script>
+    <script type="text/javascript" src="../script/dragula.min.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            GetSelfStock();
+        };
+
+        function GetSelfStock() {
+            sendGet(ServicesConifg.SelfStocking.QuerySelfStocks, function(data) {
+                $("#stock-list").html(template("stocklistTemplate", {
+                    List: data
+                }));
+
+                var drag;
+                $(".icon-229icotuodong").on("touchstart", function() {
+                    drag = dragula([document.getElementById("stock-list")]);
+                });
+                $(".icon-229icotuodong").on("touchend", function() {
+                    drag.destroy();
+                    setliindex();
+                });
+
+                $(".icon-zhiding").on("touchend", function() {
+                    var li = $(this).parent().parent();
+                    $("#stock-list").prepend(li);
+                    setliindex();
+                });
+                $("#allCheck").click(function() {
+                    if ($(this).prop("checked")) { //全选
+                        $("input[name='edit']").prop("checked", true);
+                    } else { //全不选
+                        $("input[name='edit']").prop("checked", false);
+                    }
+                });
+            }, function(err) {
+                showToast(err);
+            });
+        }
+
+        function setliindex() {
+            $("#stock-list li").each(function(i, e) {
+                $(e).attr("index", i);
+            });
+        }
+
+        function delSelfStock() {
+            var ids = "";
+            $("input[name='edit']").each(function(i, e) {
+                if ($(e).prop("checked")) {
+                    ids += $(e).val() + ",";
+                    $(e).parent().parent().parent().remove();
+                }
+            });
+            sendPost(ServicesConifg.SelfStocking.DeleteSelfStock, {
+                ids: ids
+            }, function(data) {
+                api.sendEvent({
+                    name: 'GetSelfStock'
+                });
+                api.closeWin({
+                    name: 'editselfstock'
+                });
+            }, function(err) {});
+        }
+
+        function submit() {
+            var _ids = Array();
+            var _sorts = Array();
+            $("#stock-list li").each(function(i, e) {
+                _ids.push($(e).attr("id"));
+                _sorts.push($(e).attr("index"));
+            });
+            sendPost(ServicesConifg.SelfStocking.SortSelfStock, {
+                ids: _ids,
+                sorts: _sorts
+            }, function(data) {
+                api.sendEvent({
+                    name: 'GetSelfStock'
+                });
+                api.closeWin({
+                    name: 'editselfstock'
+                });
+            }, function(err) {});
+        }
+    </script>
+</body>
+
+</html>

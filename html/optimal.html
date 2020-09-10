@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>最优策略</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #f8f8f8;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit" id="header">
+            最优策略
+        </div>
+    </div>
+
+    <div id="wrapper">
+        <div id="scrollerBox" class="scrollerBox">
+            <!-- top-down -->
+            <div class="mar-top">
+                <ul class="trade-dt" id="OptimalList"></ul>
+            </div>
+            <div style="height:3rem;"></div>
+        </div>
+    </div>
+
+    <script type="text/template" charset="utf-8" id="templateNothing">
+        <div class="nothing">
+            <img src="/images/nothing.png">
+        </div>
+    </script>
+
+    <script type="text/template" id="templateOptimalList">
+        <li>
+            <div class="trade-dtbuy">
+                <a onclick="goUserGains('{{UserId}}')">
+                    <img src="{{Portrait}}" onerror="this.src='../images/general-tx.png'">
+                    <span class="trade-dtbuy-tit">{{NickName}}</span>
+                </a>
+                <span class="trade-dtbuy-gp">{{StockName}}<i>({{StockCode}})</i></span>
+                <span><button class="wcp-btn wcp-btn-pad04 wcp-btn-empty" onclick="goBuy('{{StockCode}}')">跟买</button></span>
+            </div>
+            <div class="trade-dtzy">
+                <div>
+                    <span>收益率：<i class="trade-dtinfo-munb" style="color:red;">{{fixd(Rate)}}%</i></span>
+                    <span>买入价：<i class="trade-dtinfo-munb">{{fixd(BuyPrice)}}</i></span>
+                </div>
+                <div>
+                    <span>买入数量：<i class="trade-dtinfo-munb">{{StockNum}}股</i></span>
+                    <span>持仓天数：<i class="trade-dtinfo-munb">{{KeepDay}}</i></span>
+                </div>
+                {{if isSubscripe}}
+                <button id="btn_{{UserId}}" onclick="CancelSubscribe({{UserId}})" class="wcp-btn wcp-btn-pad01 wcp-btn-empty">取消订阅</button>
+                {{else}}
+                <button id="btn_{{UserId}}" onclick="AddSubscribe({{UserId}})" class="wcp-btn wcp-btn-pad01 wcp-btn-empty">订阅</button>
+                {{/if}}
+            </div>
+        </li>
+    </script>
+
+    <script type="text/javascript">
+        var jscroller;
+        var pageSize = 8;
+
+        _apiready = function() {
+            template.helper("timeFormat", function(time) {
+                return time.substring(11, 16);
+            });
+            template.helper("DateFormat", function(time) {
+                return time.replace('T', ' ').substring(0, 16);
+            });
+            template.helper("fixd", function(dec) {
+                if (dec == null)
+                    return "0.00";
+                else
+                    return dec.toFixed(2);
+            });
+
+            jscroller = new JRoll("#wrapper");
+            var tHtml = $("#templateOptimalList").html(); // 加载模板
+            jscroller.infinite({ //上拉加载
+                getData: function(page, callback, errorCallback) {
+                    if (page) {
+                        loadOptimalList(page, function(data) {
+                            callback(data);
+                        });
+                    }
+                },
+                compile: function(text) { //重写模板引擎
+                    return template.compile(text);
+                },
+                template: tHtml,
+                targetId: "OptimalList"
+            });
+            jscroller.pulldown({ //下拉刷新
+                refresh: function(complete) {
+                    $api.dom("#OptimalList").innerHTML = "";
+                    jscroller.options.page = 1;
+                    loadOptimalList(1, function(data) {
+                        jscroller.infinite_callback(data); //直接调用上拉加载的方法
+                        complete(); //完成加载
+                    });
+                }
+            });
+        };
+
+        var loadOptimalList = function(page, _compile) {
+            showLoading();
+            sendPost(ServicesConifg.Position.QueryOptimalPosition, {
+                    pageIndex: page,
+                    pageSize: pageSize
+                },
+                function(succ) {
+                    if (_compile) { //自定义渲染
+                        if (succ.isLastPage) {
+                            jscroller.options.total = page;
+                        }
+                        _compile(succ.list);
+                    }
+
+                    closeLoading();
+                },
+                function(err) {
+                    if (_compile) {
+                        jscroller.options.total = page;
+                        _compile([]);
+                    }
+                    closeLoading();
+                }
+            );
+        };
+        var goBuy = function(code) {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'addStrategy',
+                    url: 'addStrategy.html',
+                    pageParam: {
+                        stockCode: code
+                    }
+                });
+            });
+        };
+
+        function goUserGains(uid) {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'userRecord',
+                    url: 'userRecord.html',
+                    pageParam: {
+                        userId: uid
+                    }
+                });
+            });
+        }
+
+        function AddSubscribe(user_id) {
+            showLoading("订阅中...");
+            sendPost(ServicesConifg.Subscribe.AddSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $("#btn_" + user_id).html("取消订阅");
+                $("#btn_" + user_id).attr("onclick", "CancelSubscribe(" + user_id + ")");
+                showToast("已订阅");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+
+        function CancelSubscribe(user_id) {
+            showLoading("取消订阅中...");
+            sendPost(ServicesConifg.Subscribe.CancelSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $("#btn_" + user_id).html("订阅");
+                $("#btn_" + user_id).attr("onclick", "AddSubscribe(" + user_id + ")");
+                showToast("已取消订阅");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+    </script>
+</body>
+
+</html>

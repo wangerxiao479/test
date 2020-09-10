@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title股票学堂</title>
+        <link href="../css/common.css" type="text/css" rel="stylesheet" />
+        <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+        <link href="../css/index.css" type="text/css" rel="stylesheet" />
+        <link href="../css/style.css" type="text/css" rel="stylesheet" />
+        <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+        <!--核心模块-->
+        <script type="text/javascript" src="../script/api.js"></script>
+        <script type="text/javascript" src="../script/app.js"></script>
+        <script type="text/javascript" src="../js/jquery.min.js"></script>
+        <script type="text/javascript" src="../js/fastclick.js"></script>
+        <!--通用组件-->
+        <script type="text/javascript" src="../js/main.js"></script>
+        <script type="text/javascript" src="../js/swiper.min.js"></script>
+        <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+        <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+        <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+        <!--通信组件-->
+        <script type="text/javascript" src="../script/core-min.js"></script>
+        <script type="text/javascript" src="../script/aes.js"></script>
+        <script type="text/javascript" src="../script/secret.js"></script>
+        <script type="text/javascript" src="../script/cacheAjax.js"></script>
+        <script type="text/javascript" src="../script/artTemplate.js"></script>
+        <style type="text/css">
+            #wrapper {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background-color: #f8f8f8;
+            }
+        </style>
+</head>
+
+<body style="background-color:#fff;">
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit" id="header">
+            股票学堂
+        </div>
+    </div>
+    <!-- 切换 -->
+    <div id="header-top">
+        <div class="swiper-wrapper" id="stockschoolChannel">
+
+        </div>
+    </div>
+    <div id="wrapper">
+        <div id="scrollerBox" class="scrollerBox" style=" margin-bottom:6rem;">
+            <!-- top-down -->
+            <div class="mar-top">
+                <ul class="news-box news-list-box" id="stockschoolListBox">
+
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/template" id="template">
+        <li onclick="goStockSchoolDetail({{id}})">
+            <span class="cg-list-tit">{{SubStr(title)}}</span>
+            <img src="data:image/gif;base64,{{photo}}" class="cg-list-img" onerror="stockschoolimgerr(this)">
+            <span class="cg-list-zy">{{zhaiyao}}</span>
+            <span class="cg-key">
+            {{if type==0}}
+            每日解盘
+            {{else if type==1}}
+            入门教程
+            {{else}}
+            精选战法
+            {{/if}}
+        </span>
+            <span class="cg-list-time">
+            <i class="fr">{{DateFormat(addtime)}}</i>
+        </span>
+            <!-- <i class="iconfont icon-icon"></i> -->
+        </li>
+    </script>
+    <script type="text/template" charset="utf-8" id="templateStockSchoolChannel">
+        {{each List as value i}}
+        <div onclick="getstockschoollist({{value.id}})" class="swiper-slide {{if i==0}}header-top-cur{{/if}}" style="padding:0 2.4rem;">{{value.name}}</div>
+        {{/each}}
+    </script>
+
+    <script type="text/javascript">
+        var jscroller;
+        var pageSize = 10;
+        var type = 0;
+        _apiready = function() {
+
+            template.helper("DateFormat", function(jsondate) {
+                if (jsondate != null) {
+                    jsondate = jsondate.replace("/Date(", "").replace(")/", "");
+                    if (jsondate.indexOf("+") > 0) {
+                        jsondate = jsondate.substring(0, jsondate.indexOf("+"));
+                    } else if (jsondate.indexOf("-") > 0) {
+                        jsondate = jsondate.substring(0, jsondate.indexOf("-"));
+                    }
+
+                    var date = new Date(parseInt(jsondate, 10));
+                    var month = date.getMonth() + 1 < 10 ? "0" + (date.getMonth() + 1) : date.getMonth() + 1;
+                    var currentDate = date.getDate() < 10 ? "0" + date.getDate() : date.getDate();
+                    var Hours = date.getHours() < 10 ? "0" + date.getHours() : date.getHours();
+                    var Minutes = date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes();
+                    var Seconds = date.getSeconds() < 10 ? "0" + date.getSeconds() : date.getSeconds();
+
+                    return date.getFullYear() + "-" + month + "-" + currentDate + " " + Hours + ":" + Minutes + ":" + Seconds;
+                } else {
+                    return "";
+                }
+            });
+            template.helper("SubStr", function(data) {
+                if (data == null)
+                    return "";
+                return data.length > 25 ? data.substring(0, 25) + "..." : data;
+            });
+
+            window.onscroll = function() {
+                $('html,body').animate({
+                    scrollTop: '0px'
+                }, 100);
+            }
+            template.helper("DateFormat", function(time) {
+                return time.replace('T', ' ').substring(0, 16);
+            });
+
+            jscroller = new JRoll("#wrapper");
+
+            getStockSchoolChannel(function() {
+                var tHtml = $("#template").html(); // 加载模板
+                jscroller.infinite({ //上拉加载
+                    getData: function(page, callback, errorCallback) {
+                        if (page) {
+                            loadStockSchoolList(page, function(data) {
+                                callback(data);
+                                jscroller.refresh();
+                                setTimeout(function() {
+                                    jscroller.refresh();
+                                }, 1000);
+                            });
+                        }
+                    },
+                    compile: function(text) { //重写模板引擎
+                        return template.compile(text);
+                    },
+                    template: tHtml,
+                    targetId: "stockschoolListBox"
+                });
+                jscroller.pulldown({ //下拉刷新
+                    refresh: function(complete) {
+                        $("#stockschoolListBox").html("");
+                        jscroller.options.page = 1;
+                        loadStockSchoolList(1, function(data) {
+                            jscroller.infinite_callback(data); //直接调用上拉加载的方法
+                            complete(); //完成加载
+                            jscroller.refresh();
+                            setTimeout(function() {
+                                jscroller.refresh();
+                            }, 1000);
+                        });
+                    }
+                });
+            });
+        };
+
+        var getStockSchoolChannel = function(callback) {
+            sendGet(ServicesConifg.StockSchool.QueryStockSchoolChannel, function(succ) {
+                $("#stockschoolChannel").append(template("templateStockSchoolChannel", {
+                    List: succ
+                }));
+                type = succ[0].id;
+                var mySwiper1 = new Swiper('#header-top', {
+                    freeMode: true,
+                    slidesPerView: 'auto',
+                });
+                $("#header-top .swiper-slide").click(function() {
+                    $(this).addClass("header-top-cur").siblings().removeClass("header-top-cur");
+                });
+                if (callback)
+                    callback();
+            }, function(err) {}, true);
+        }
+
+        var loadStockSchoolList = function(page, _compile) {
+            showLoading();
+            sendPost(ServicesConifg.StockSchool.QueryStockSchoolList, {
+                    pageIndex: page,
+                    pageSize: pageSize,
+                    type: type
+                },
+                function(succ) {
+                    closeLoading();
+                    if (_compile) { //自定义渲染
+                        if (succ.isLastPage) {
+                            jscroller.options.total = page;
+                        }
+                        _compile(succ.result);
+                    }
+                },
+                function(err) {
+                    console.log(err);
+                    closeLoading();
+                    if (_compile) {
+                        jscroller.options.total = page;
+                        _compile([]);
+                    }
+                }
+            );
+        };
+        var goStockSchoolDetail = function(id) {
+            api.openWin({
+                name: 'stockschooldetail',
+                url: 'stockschooldetail.html',
+                pageParam: {
+                    id: id
+                }
+            });
+        }
+        var getstockschoollist = function(id) {
+            type = id;
+            page = 1;
+            jscroller.scrollTo(0, 0, 200);
+            jscroller.options.total = 999;
+            $("#stockschoolListBox").html("");
+            loadStockSchoolList(1, function(data) {
+                jscroller.infinite_callback(data); //直接调用上拉加载的方法
+            });
+        }
+        var stockschoolimgerr = function(e) {
+            e.src = "../images/news-img.JPG";
+            e.onerror = null;
+        };
+    </script>
+</body>
+
+</html>

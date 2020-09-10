@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>文档</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/my.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+    <link href="../css/layer.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../script/layer.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            api.setStatusBarStyle({
+                style: 'light',
+                color: "#f40303"
+            });
+            BindUser();
+            $api.addEvt($api.dom("#editHeader"), 'click', function(e) {
+                api.actionSheet({
+                    title: '头像修改上传',
+                    cancelTitle: '关闭',
+                    buttons: ['拍照上传', '相册上传']
+                }, function(ret, err) {
+                    if (ret) {
+                        selectPicture(ret.buttonIndex);
+                    } else {}
+                });
+            });
+            api.addEventListener({
+                name: 'headChange'
+            }, function(ret, err) {
+                if (ret) {
+                    BindUser();
+                } else {
+
+                }
+            });
+
+            $("#isopen").click(function() {
+                showLoading("加载中");
+                var isopen = ($("#isopen").hasClass("onswitch-qy") == false);
+                sendPost(ServicesConifg.Account.UpdateIsOpen, {
+                    isOpen: isopen
+                }, function(succ) {
+                    closeLoading();
+                    if (isopen) {
+                        showToast("实盘信息已开放");
+                    } else {
+
+                        showToast("实盘信息已关闭");
+                    }
+                    var userInfo = getUserInfo();
+                    userInfo.IsOpen = isopen;
+                    saveUserInfo(userInfo);
+                }, function(err) {
+                    closeLoading();
+                }, false);
+            });
+
+        };
+
+        function selectPicture(i) {
+            var param = {
+                sourceType: 'camera',
+                encodingType: 'jpg',
+                mediaValue: 'pic',
+                destinationType: 'url',
+                allowEdit: true,
+                quality: 100
+            };
+            if (i == 1) {
+                param.sourceType = 'camera';
+            } else if (i == 2) {
+                param.sourceType = 'library';
+            } else {
+                return;
+            }
+
+            api.getPicture(param, function(ret, err) {
+                if (ret) {
+                    if (ret.data && ret.data != "") {
+                        api.openWin({
+                            name: 'clip',
+                            url: 'imageClip.html',
+                            pageParam: {
+                                data: ret.data
+                            },
+                            bounces: false,
+                            bgColor: 'rgba(0,0,0,0)',
+                            animation: {
+                                type: "push",
+                                subType: "from_right",
+                                duration: 500
+                            }
+                        });
+
+                    }
+                } else {
+                    alert(JSON.stringify(err));
+                }
+            });
+
+        };
+
+        function BindUser() {
+            var user = getUserInfo();
+            $("#userHeader").attr("src", user.UserPortrait)
+            $("#userName").html(user.NickName);
+            $("#userPhone").html(user.Phone);
+            if (user.IsOpen) {
+                $("#isopen").removeClass("onswitch-qy");
+            }
+        };
+
+        function logOut() {
+            var dialogBox = api.require("dialogBox");
+            dialogBox.confirm({
+                tapClose: true,
+                msg: {
+                    content: '是否要退出账户？',
+                    leftBtnTitle: '取消',
+                    rightBtnTitle: '确定'
+                },
+                styles: {
+                    bg: '#fff',
+                    maskBg: 'rgba(0,0,0,0.5)',
+                    msg: {
+                        color: '#000000',
+                        size: 20,
+                        maginLR: 10,
+                        maginT: 15
+                    },
+                    leftBtn: {
+                        color: '#000',
+                        highlightBg: 'rgba(255,0,0,0.5)',
+                        size: 16
+                    },
+                    rightBtn: {
+                        bg: 'rgb(255,0,0)',
+                        highlightBg: 'rgba(255,0,0,0.5)',
+                        color: '#FFF',
+                        size: 16
+                    }
+                }
+            }, function(ret) {
+                if (ret.eventType == "ok") {
+                    clearLoginStatus();
+                    api.sendEvent({
+                        name: 'offline'
+                    });
+                    api.closeWin();
+                    dialogBox.close({
+                        dialogName: 'confirm'
+                    });
+                } else {
+                    dialogBox.close({
+                        dialogName: 'confirm'
+                    });
+                }
+            });
+
+
+        }
+
+        function changeNickName() {
+            var user = getUserInfo();
+            var boxHtml = template("nTemplate", {
+                nickName: user.NickName
+            });
+            layer.open({
+                title: [
+                    '修改昵称',
+                    'background-color: #FF4351; color:#fff;height:40px; line-height:40px;'
+                ],
+                btn: ['提交', '关闭'],
+                content: boxHtml,
+                yes: function(index) {
+                    var value = $("#_nickName").val();
+                    showLoading("加载中");
+                    sendPost(ServicesConifg.Account.UpdateNickName, {
+                        nikeName: value
+                    }, function(succ) {
+                        api.sendEvent({
+                            name: 'userInfoBack'
+                        });
+                        $("#userName").html(value);
+                        closeLoading();
+                    }, function(err) {
+                        showToast("修改失败" + err);
+                        closeLoading();
+                    }, false);
+                    layer.close(index);
+                }
+            });
+
+
+        };
+
+        function passWord() {
+            api.openWin({
+                name: 'password',
+                url: 'password.html'
+            });
+        }
+
+        function payPassWord() {
+            api.openWin({
+                name: 'outpassword',
+                url: 'outpassword.html'
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="nTemplate">
+        <div class="trade-profit">
+            <div class="box-crossr">
+                <label>昵称:</label>
+                <input id="_nickName" class="wp-text" type="text" maxlength="10" placeholder="请输入新昵称" value="{{nickName}}" />
+            </div>
+        </div>
+    </script>
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            个人资料
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container"></div>
+    <!-- 4-data -->
+    <div class="wcp-second-box dis-top">
+        <ul class="my-data">
+            <li>
+                <a href="#" id="editHeader">
+                    <span class="data-tit">头像</span>
+                    <span class="sub-fr"><img id="userHeader" src="../images/general-tx.png" class="sub-tx" onerror="this.src='../images/general-tx.png'"></span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="changeNickName()">
+                    <span class="data-tit">昵称</span>
+                    <span class="sub-fr" id="userName">-</span>
+                    <i class="iconfont icon-icon"></i>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <span class="data-tit">手机号</span>
+                    <span class="sub-fr" id="userPhone">-</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="passWord()">
+                    <span class="data-tit">修改密码</span>
+                    <i class="iconfont icon-icon"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 2-data -->
+    <div class="wcp-second-box">
+        <ul class="my-data">
+            <li>
+                <a href="#" onclick="payPassWord()">
+                    <span class="data-tit">设置交易密码</span>
+                    <i class="iconfont icon-icon"></i>
+                </a>
+            </li>
+            <li class="switch-li">
+                <a href="#">
+                    <span class="data-tit">实盘是否开放</span>
+                    <button id="isopen" class="switch-qy onswitch-qy"><span></span></button>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="fill-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-red" onclick="logOut()">安全退出</button></div>
+
+</body>
+
+</html>

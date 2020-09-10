@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>历史记录</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet">
+    <link href="../css/style.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <style type="text/css">
+      #wrapper{position: absolute; width: 100%; height: 100%;}
+    </style>
+
+    <script type="text/javascript">
+        var type = 0;//0 实盘， 1 模拟盘
+        var userId = 0; //0 自己 其他加载别人数据
+        var pageSize = 8; //每页数量
+        var jscroller; //滑动对象
+        _apiready = function() {
+            type = api.pageParam.type || 0;
+            userId = api.pageParam.userId || 0;
+            jscroller = new JRoll("#wrapper");
+            var tHtml = $("#template").html(); // 加载模板
+            jscroller.infinite({ //上拉加载
+                getData: function(page, callback, errorCallback) {
+                    loadPosition(page, function(data){
+                        callback(data);
+                    });
+                },
+                compile: function(text) { //重写模板引擎
+                    return template.compile(text);
+                },
+                template: tHtml
+            });
+            jscroller.pulldown({ //下拉刷新
+                refresh:function(complete)
+                {
+                    $api.dom("#scroller").innerHTML = "";
+                    jscroller.options.page = 1;
+                    loadPosition(1,function(data){
+                        jscroller.infinite_callback(data); //直接调用上拉加载的方法
+                        complete(); //完成加载
+                    });
+                }
+            });
+        };
+
+
+        var loadPosition = function(page, _compile) {
+            var url = ServicesConifg.Position.QueryHistoryList;
+            if (type == 1) {
+                url = ServicesConifg.Position.QuerySimHistoryList;
+            }
+            var param = {
+                pageIndex: page,
+                pageSize: pageSize,
+                userId: userId
+            };
+            showLoading("加载历史记录");
+            sendPost(url, param, function(succ) {
+                if (_compile) { //自定义渲染
+                    if (succ.isLastPage) {
+                        jscroller.options.total = page;
+                    }
+                    _compile(succ.list);
+                }
+                closeLoading();
+            }, function(err) {
+                closeLoading();
+            });
+        };
+
+        var goDetialy = function(PositionID){
+            api.openWin({
+                name: 'tradeDetialy',
+                url: 'tradeDetialy.html',
+                pageParam: {
+                    PositionID: PositionID
+                }
+            });
+
+        };
+    </script>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="template">
+        <div class="wcp-second-box">
+            <h3 class="his-retit"><a href="#" onclick="goDetialy({{PositionID}})">{{StockName}}<em>{{StockCode}}</em>
+              {{if StrategyType==0}}
+              <em class="bg-red" style="color:#fff;font-size: .7rem;font-style: normal;border-radius: 4px;padding: .15rem .3rem;margin-right: .3rem;">实盘</em>
+              {{else}}
+              <em class="bg-red" style="color:#fff;font-size: .7rem;font-style: normal;border-radius: 4px;padding: .15rem .3rem;margin-right: .3rem;">模拟盘</em>
+              {{/if}}
+              <i class="iconfont icon-icon"></i></a></h3>
+            <ul class="his-record">
+                <li>信用金<span class="color1">{{Money}}</span></li>
+                <li>股票数<span class="color1">{{StockNum}}</span></li>
+                <li>交易盈亏<span class="{{if TradeGain > 0}}red{{else if TradeGain < 0}}green{{/if}}">{{TradeGain}}</span></li>
+            </ul>
+        </div>
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            历史记录
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container" id="wrapper">
+        <div id="scroller"></div>
+    </div>
+</body>
+
+</html>

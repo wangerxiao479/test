@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>资金流水</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+
+
+    <script type="text/javascript">
+        window.onload = function() {
+            var tabsSwiper = new Swiper('#tabs-container', {
+                speed: 500,
+                onSlideChangeStart: function() {
+                    $(".tabs li.active").removeClass('active')
+                    $(".tabs li").eq(tabsSwiper.activeIndex).addClass('active')
+
+                    pageIndex = 1;
+                    $("#StrategyFlow").html("");
+                    $("#CapitalFlow").html("");
+                    if (tabsSwiper.activeIndex == 0)
+                        loadMoneyRecord();
+                    else {
+                        loadFundsRecord();
+                    }
+                }
+            })
+            $(".tabs li").on('touchstart mousedown', function(e) {
+                e.preventDefault()
+                $(".tabs .active").removeClass('active')
+                $(this).addClass('active')
+                tabsSwiper.slideTo($(this).index())
+            })
+            $(".tabs li").click(function(e) {
+                e.preventDefault()
+            });
+
+            $(window).scroll(function() {
+                var scrollTop = $(this).scrollTop();
+                var scrollHeight = $(document).height();
+                var windowHeight = $(this).height();
+                if (scrollTop + windowHeight == scrollHeight) {
+                    if ($(".tabs li.active").index == 0)
+                        loadMoneyRecord();
+                    else {
+                        loadFundsRecord();
+                    }
+                }
+            });
+        }
+        template.helper("DateFormat", function(jsondate) {
+            if (jsondate != null && jsondate.length >= 16) {
+                return jsondate.replace('T', ' ').substring(0, 16);
+            } else {
+                return "";
+            }
+        });
+        template.helper("SubStr", function(data) {
+            if (data == null)
+                return "";
+            return data.length > 30 ? data.substring(0, 30) + "..." : data;
+        });
+        template.helper("fixd", function(dec) {
+            if (dec == null)
+                return "0.00";
+            return dec.toFixed(2);
+        });
+
+        _apiready = function() {
+            loadMoneyRecord();
+        };
+
+        var pageIndex = 1;
+        var pageSize = 20;
+
+        var loadMoneyRecord = function() {
+            showLoading("加载中");
+            sendPost(ServicesConifg.Account.QueryMoneyRecord, {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize
+                },
+                function(rel) {
+                    closeLoading();
+                    if (rel.list.length > 0) {
+                        pageIndex++;
+                        $("#StrategyFlow").append(template("template2", {
+                            list: rel.list
+                        }));
+                    } else {
+                        showToast("没有更多数据了");
+                    }
+                },
+                function(err) {
+                    closeLoading();
+                    showToast(err);
+                });
+        }
+
+        var loadFundsRecord = function() {
+            showLoading("加载中");
+            sendPost(ServicesConifg.Account.QueryFundsRecord, {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize
+                },
+                function(rel) {
+                    closeLoading();
+                    if (rel.list.length > 0) {
+                        pageIndex++;
+
+                        $("#CapitalFlow").append(template("template1", {
+                            list: rel.list
+                        }));
+                    } else {
+                        showToast("没有更多数据了");
+                    }
+                },
+                function(err) {
+                    closeLoading();
+                    showToast(err);
+                });
+        };
+    </script>
+
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            资金流水
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container">
+        <!-- tab -->
+        <div class="tabs">
+            <ul>
+                <li class="active"><a href="#">资金流水</a></li>
+                <li><a href="#">充值提现记录</a> </li>
+            </ul>
+        </div>
+        <div id="tabs-container" class="swiper-container">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <ul id="StrategyFlow" class="acc-xq  wcp-first-box">
+
+                    </ul>
+                </div>
+                <div class="swiper-slide">
+                    <ul id="CapitalFlow" class="acc-xq  wcp-first-box">
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/template" charset="utf-8" id="template1">
+        {{each list as value}}
+        <li>
+            {{if value.type==0}}
+            <span class="acc-xq-tit">充值</span>
+            <span class="acc-xq-money red">+{{fixd(value.money)}}</span> {{else}}
+            <span class="acc-xq-tit">提现</span>
+            <span class="acc-xq-money green">-{{fixd(value.money)}}</span> {{/if}}
+            <span class="acc-xq-time">{{DateFormat(value.add_time)}} {{value.type==0?value.pay_status:value.examine_status}}</span>
+        </li>
+        {{/each}}
+    </script>
+    <script type="text/template" charset="utf-8" id="template2">
+        {{each list as value}}
+        <li>
+            <span class="acc-xq-tit">{{SubStr(value.mark)}}</span> {{if (value.money>0)}}
+            <span class="acc-xq-money red">+{{fixd(value.money)}}</span> {{else}}
+            <span class="acc-xq-money green">{{fixd(value.money)}}</span> {{/if}}
+            <span class="acc-xq-time">{{DateFormat(value.pay_time)}}</span>
+        </li>
+        {{/each}}
+    </script>
+
+</body>
+
+</html>

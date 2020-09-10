@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>充值</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+
+    <script type="text/javascript">
+        _apiready = function() {
+            sendGet(ServicesConifg.SysConfig.QueryRechargeMessage, function(succ) {
+                $("#rechargemessage").html(succ.RechargeMessage);
+            }, function(err) {});
+        };
+        var SubmitOrder = function() {
+            var money = $("#money").val();
+            var type = $("input[name='ps']:checked").val();
+            var _paytype = 0;
+            if (/^\d+$/.test(money)) //判断是否整数
+            {
+                if (type == 1) {
+                    _paytype = 2;
+                } else if (type == 2) {
+                    _paytype = 0;
+                } else if (type == 3) {
+                    _paytype = 3;
+                } else if (type == 5) {
+                    _paytype = 0;
+                } else if (type == 4) {
+                    _paytype = 4;
+                } else if (type == 8) {
+                    _paytype = 8;
+
+                }
+                if (money < 100) {
+                    showToast("入金最小金额为100元");
+                    return;
+                }
+                showLoading("提交订单中");
+                sendPost(ServicesConifg.Account.Recharge, {
+                        money: money,
+                        payBy: _paytype
+                    },
+                    function(succ) {
+                        showToast("订单提交成功");
+                        if (type == 3 || type == 5) {
+                            closeLoading();
+                            api.openWin({
+                                name: 'rechargeqrcode',
+                                url: 'rechargeqrcode.html',
+                                pageParam: {
+                                    money: money,
+                                    type: type,
+                                    qrcode: succ.code_img_url,
+                                    order_num: succ.order_num
+                                }
+                            });
+                        } else if (type == 4) {
+                            var unPay = api.require('unionPay');
+                            unPay.pay({
+                                tn: succ,
+                                devMode: true
+                            }, function(ret, err) {
+                                if (ret.result == "success") {
+                                    api.execScript({
+                                        name: 'account',
+                                        script: '_apiready();'
+                                    });
+                                    //这里去查询支付状态
+                                    api.closeToWin({
+                                        name: 'account'
+                                    });
+                                } else {
+                                    showToast("支付失败");
+                                }
+                                closeLoading();
+                            });
+                        } else if (type == 8) {
+                            showLoading("提交支付中...");
+                            api.openWin({
+                                name: 'rechargekj',
+                                url: 'rechargekj.html',
+                                pageParam: {
+                                    url: succ
+                                }
+                            });
+                            closeLoading();
+                        } else {
+                            showLoading("提交支付中...");
+                            api.openWin({
+                                name: 'alipayPay',
+                                url: succ.code_url
+                            });
+                            callback(succ.order_num);
+                            closeLoading();
+                            var dialogBox = api.require("dialogBox");
+                            dialogBox.alert({
+                                texts: {
+                                    content: '支付已提交支付平台支付',
+                                    leftBtnTitle: '支付失败',
+                                    rightBtnTitle: '支付成功'
+                                },
+                                styles: {
+                                    bg: '#fff',
+                                    w: 300,
+                                    content: {
+                                        color: '#000',
+                                        size: 14
+                                    },
+                                    left: {
+                                        marginB: 7,
+                                        marginL: 20,
+                                        w: 130,
+                                        h: 35,
+                                        corner: 15,
+                                        bg: '#fff1ef',
+                                        size: 12,
+                                        color: "#fa5c36"
+                                    },
+                                    right: {
+                                        marginB: 7,
+                                        marginL: 10,
+                                        w: 130,
+                                        h: 35,
+                                        corner: 15,
+                                        bg: '#fa5c36',
+                                        size: 12,
+                                        color: "#fff"
+                                    }
+                                }
+                            }, function(ret) {
+                                api.execScript({
+                                    name: 'account',
+                                    script: '_apiready();'
+                                });
+
+                                if (ret.eventType == 'left') {
+                                    api.closeToWin({
+                                        name: 'recharge'
+                                    });
+                                } else {
+                                    //这里去查询支付状态
+                                    api.closeToWin({
+                                        name: 'account'
+                                    });
+                                }
+                                dialogBox.close({
+                                    dialogName: 'alert'
+                                });
+                            });
+                        }
+                    },
+                    function(err) {
+                        closeLoading();
+                        showToast(err);
+                    }
+                );
+            } else {
+                showToast("请输入一个整数");
+            }
+        };
+        var callback = function(ordernum) {
+            sendPost(ServicesConifg.Account.RechargeStatus, {
+                    orderNum: ordernum
+                },
+                function(succ) {
+                    if (succ == 0) {
+                        //支付成功
+                        api.closeToWin({
+                            name: 'account'
+                        });
+                        var dialogBox = api.require("dialogBox");
+                        dialogBox.close({
+                            dialogName: 'alert'
+                        });
+                    } else {
+                        setTimeout(function() {
+                            callback(ordernum);
+                        }, 1000);
+                    }
+                },
+                function(err) {}
+            );
+        }
+    </script>
+</head>
+
+<body>
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            充值
+        </div>
+    </div>
+    <div class="ui-container">
+
+
+         <div class="wcp-second-box wcp-dl">
+            <dl>
+                <dt><i class="iconfont icon-icon-rmb"></i></dt>
+                <dd><input id="money" type="number" class="textinput" placeholder="请输入充值金额" min="1" step="1" /></dd>
+            </dl>
+        </div>
+        <!-- top-up -->
+        <div class="wcp-second-box pay-style">
+            <h5>支付方式</h5>
+            <ul>
+                <li style="display:none;">
+                    <label>
+                <img src="../images/pay-yl.jpg">
+                <span>银联快捷</span>
+                <!-- <em class="red1 font-12" style="font-style: normal; border:1px solid #fa5c36;  padding:0px 5px; border-radius:4px; ">推荐</em> -->
+                <input type="radio" class="p-radio" value="8" name="ps">
+                <i class="radio-btn"></i>
+            </label>
+                </li>
+                <li>
+            <label>
+              <img src="../images/pay-yl.png">
+              <span>银联支付</span>
+              <input type="radio" class="p-radio" name="ps" value="8">
+              <i class="radio-btn"></i>
+          </label>
+                </li>
+
+            </ul>
+        </div>
+        <!-- <div id="rechargemessage" style="margin-left: 0.85rem;"></div> -->
+        <div class="fill-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-red" onclick="SubmitOrder()">下一步</button></div>
+
+    </div>
+</body>
+
+</html>

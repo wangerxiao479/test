@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>消息中心</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/quotation.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            getMsgNum();
+            api.addEventListener({
+                name: 'MessageLsBack'
+            }, function(ret, err) {
+                getMsgNum();
+            });
+            api.addEventListener({
+                name: 'OderMessageBack'
+            }, function(ret, err) {
+                getMsgNum();
+            });
+            api.addEventListener({
+                name: 'viewdisappear'
+            }, function(ret, err) {
+                api.sendEvent({
+                    name: 'MessageBack'
+                });
+            });
+        }
+        var getMsgNum = function() {
+            sendGet(ServicesConifg.Message.QuerySubMessagesCount, function(succ) {
+                if (succ > 0)
+                    $("#OrderMsgNum").html('<span class="sub-sz">' + succ + '</span>');
+                else {
+                    $("#OrderMsgNum").html('');
+                }
+            }, function(err) {}, true);
+            sendGet(ServicesConifg.Message.QuerySysMessagesCount, function(succ) {
+                if (succ > 0)
+                    $("#MsgNum").html('<span class="sub-sz">' + succ + '</span>');
+                else {
+                    $("#MsgNum").html('');
+                }
+            }, function(err) {}, true);
+            sendGet(ServicesConifg.Message.QueryLastMessage, function(succ) {
+                var lastmessage = succ.lastmessage.length > 20 ? succ.lastmessage.substring(0, 20) + "..." : succ.lastmessage;
+                var lastnotification = succ.lastnotification > 20 ? succ.lastnotification.substring(0, 20) + "..." : succ.lastnotification;
+                $("#sysText").html(lastmessage);
+                $("#subText").html(lastnotification);
+            }, function(err) {}, true);
+        };
+        var goMessage = function(type) {
+            api.openWin({
+                name: 'messagels',
+                url: 'messagels.html',
+                pageParam: {
+                    mstype: type
+                }
+            });
+        };
+
+        var goOrderMsg = function() {
+            api.openWin({
+                name: 'orderMessage',
+                url: 'orderMessage.html'
+            });
+        };
+    </script>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            消息中心
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container"></div>
+    <!-- 3-ico -->
+    <div class="wcp-first-box">
+        <ul class="message">
+            <li class="">
+                <a href="#" onclick="goOrderMsg()">
+                    <i class="iconfont icon-dingyue"></i>
+                    <span class="message-con">订阅动态<em class="message-con-sm">订阅大牛的各种操作动态</em></span>
+                    <span id="OrderMsgNum"></span>
+                    <!-- <span class="sub-sz">3</span> -->
+                    <i class="iconfont icon-icon" id="OrderMsgNum"></i>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="goMessage('1')">
+                    <i class="iconfont icon-tongzhi"></i>
+                    <span class="message-con">系统消息
+                      <em class="message-con-sm" id="sysText">
+
+                    </em></span>
+                    <span id="MsgNum"></span>
+                    <i class="iconfont icon-icon"></i>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="goMessage('2')">
+                    <i class="iconfont icon-gonggao"></i>
+                    <span class="message-con">通知公告<em class="message-con-sm" id="subText">
+
+                    </em></span>
+                    <!-- <span class="sub-sz">1</span> -->
+                    <i class="iconfont icon-icon"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../../js/fastclick.js"></script>
+    <script type="text/javascript" src="../js/main.js"></script>
+</body>
+
+</html>

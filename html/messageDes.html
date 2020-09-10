@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>消息详情</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/quotation.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            $api.dom("#title").innerHTML = api.pageParam.title;
+            $api.dom("#content").innerHTML = api.pageParam.content;
+            $api.dom("#type").innerHTML = api.pageParam.type;
+            $api.dom("#addtime").innerHTML = dateformat(api.pageParam.addtime);
+            sendPost(ServicesConifg.Message.HaveRead, {
+                id: api.pageParam.id
+            }, function(succ) {}, function(err) {});
+        };
+
+        function dateformat(jsondate) {
+            if (jsondate != null) {
+                jsondate = jsondate.replace("T", " ").substring(0, jsondate.indexOf('.'));
+                return jsondate;
+            } else {
+                return "";
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            消息详情
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="wcp-first-box">
+        <div class="article-con">
+            <h3 id="title"></h3>
+            <div class="art-bot">
+                <span class="article-time" id="addtime"></span>
+                <span class="article-author" id="type"></span>
+            </div>
+
+            <p id="content"></p>
+        </div>
+    </div>
+
+</body>
+
+</html>

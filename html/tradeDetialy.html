@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>交易详情</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet">
+
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+
+    <script type="text/javascript">
+        var scroller;
+        var PositionID;
+        _apiready = function() {
+            PositionID = api.pageParam.PositionID;
+            if (PositionID) {
+                loadDetialy();
+            } else {
+                showToast("记录已被删除或者不存在", function() {
+                    api.closeWin();
+                });
+            }
+
+            template.helper("TimeFormat", function(dec) {
+                if (dec != null) {
+                    return dec.replace("T", " ").substring(0, dec.indexOf('.'));
+                } else {
+                    return "";
+                }
+            });
+
+            template.helper("Fixed", function(dec) {
+                if (dec) {
+                    var _dec = parseFloat(dec);
+                    if (_dec) {
+                        return _dec.toFixed(2);
+                    }
+                }
+                return "0.00";
+            });
+            scroller = new JRoll("#wrapper");
+            scroller.pulldown({
+                refresh: function(complete) {
+                    loadDetialy(complete);
+                }
+            });
+        };
+        var loadDetialy = function(end) {
+            showLoading("加载详情");
+            sendPost(ServicesConifg.Position.QueryDetails, {
+                id: PositionID
+            }, function(succ) {
+                var html = template("template", succ);
+                $("#content").html(html);
+                closeLoading();
+                if (end) {
+                    end();
+                }
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        };
+    </script>
+</head>
+
+<body>
+
+    <script type="text/template" id="template">
+        <div class="wcp-second-box">
+            <h3 class="his-retit">
+            {{StockName}}
+            <em>{{Status}}</em>
+            <span>
+              单号：<i class="color1">{{StrategyCode}}</i>
+            </span>
+          </h3>
+            <p class="his-detit"><span class="i1"></span>交易明细</p>
+            <ul class="his-detail">
+                <li>交易本金<span class="col">{{Fixed(Principal)}}</span></li>
+                <li>信&nbsp;&nbsp;用&nbsp;&nbsp;金<span class="col">{{Fixed(Money)}}</span></li>
+                <li>交易股数<span class="col">{{StockNum}}</span></li>
+                <li>交易模式<span class="col">{{TradeModel}}</span></li>
+                <li>买入价格<span class="col">{{Fixed(BuyPrice)}}</span></li>
+                <li>卖出价格<span class="col">{{Fixed(SellPrice)}}</span></li>
+                <li>买入时间<span class="col sm">{{TimeFormat(BuyTime)}}</span></li>
+                <li>卖出时间<span class="col sm">{{TimeFormat(SellTime)}}</span></li>
+                <li>买入类型<span class="col">{{BuyType}}</span></li>
+                <li>卖出类型<span class="col">{{SellType}}</span></li>
+            </ul>
+        </div>
+
+        <div class="wcp-second-box">
+            <p class="his-detit"><span class="i2"></span>盈亏明细</p>
+            <ul class="his-detail">
+                <li>策略盈亏<span class="{{if StrategyGain > 0}}red{{else if StrategyGain < 0}}green{{/if}}">{{if StrategyGain > 0}}+{{/if}}{{Fixed(StrategyGain)}}</span></li>
+                <li>交易盈亏<span class="{{if TradeGain > 0}}red{{else if TradeGain < 0}}green{{/if}}">{{if TradeGain > 0}}+{{/if}}{{Fixed(TradeGain)}}</span></li>
+                <li>盈亏分配<span class="{{if GainMoney > 0}}red{{else if GainMoney < 0}}green{{/if}}">{{if GainMoney > 0}}+{{/if}}{{Fixed(GainMoney)}}</span></li>
+                <li>总手续费<span class="green">{{Fixed(TotalFee)}}</span></li>
+                <li>买手续费<span class="green">{{Fixed(BuyFee)}}</span></li>
+                <li>卖手续费<span class="green">{{Fixed(SellFee)}}</span></li>
+                <li>买服务费<span class="green">{{Fixed(BuyOtherFee)}}</span></li>
+                <li>卖服务费<span class="green">{{Fixed(SellOtherFee)}}</span></li>
+                <li>其他费用<span class="col green">{{Fixed(OtherFee)}}</span></li>
+                <li>卖印花税<span class="green">{{Fixed(StampFee)}}</span></li>
+            </ul>
+        </div>
+
+        <div class="wcp-second-box">
+            <p class="his-detit"><span class="i3"></span>账户结算</p>
+            <ul class="his-detail">
+                <li>冻结信用金<span class="red">{{Fixed(Money)}}</span></li>
+                <li>合约天数<span class="col">{{Day}}</span></li>
+                <li>返还信用金<span class="red">{{Fixed(RuturnMoney)}}</span></li>
+                <li>管理费<span class="green">{{Fixed(PositionFee)}}</span></li>
+                <li>盈利扣减<span class="red">{{Fixed(ProfitLossMoney)}}</span></li>
+                <li>亏损扣减<span class="green">{{Fixed(LossMoney)}}</span></li>
+            </ul>
+        </div>
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            交易详情
+        </div>
+        <!-- <a class="right-ico share" href="javascript:;"></a> -->
+    </div>
+    <div id="wrapper" class="ui-container">
+        <div id="content"></div>
+    </div>
+
+
+    <!-- 隐藏信息-分享 -->
+    <div class="share_panel">
+        <h2>分享到</h2>
+        <ul>
+            <li>
+                <a href="#">
+                    <img src="images/btn_share_wx.png">
+                    <span>微信</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <img src="images/btn_share_pyq.png">
+                    <span>朋友圈</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <img src="images/btn_share_qq.png">
+                    <span>QQ好友</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <img src="images/btn_share_kj.png">
+                    <span>QQ空间</span>
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <img src="images/btn_share_link.png">
+                    <span>复制链接</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <!-- 遮罩层  -->
+    <div class="mask"></div>
+
+
+</body>
+
+</html>

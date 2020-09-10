@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>首页</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+    <link href="../css/layer.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <script type="text/javascript" src="../script/layer.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        var jscroller;
+        var pageSize = 5;
+        _apiready = function() {
+            //通知栏点击事件
+            api.addEventListener({
+                name: 'noticeclicked'
+            }, function(ret, err) {
+                if (ret) {
+                    sendPost(ServicesConifg.News.QueryHomeNewsList, {
+                            title: ret.value
+                        },
+                        function(succ) {
+                            if (succ > 0) {
+                                goNewsDetail(succ);
+                            } else {
+                                goMessage();
+                            }
+                        },
+                        function(err) {}
+                    );
+                }
+            });
+
+            var tabclSwiper = new Swiper('#tabcl-container', {
+                speed: 500,
+                onSlideChangeStart: function() {
+                    $(".tabcl li.active").removeClass('active')
+                    $(".tabcl li").eq(tabclSwiper.activeIndex).addClass('active')
+                }
+            })
+            $(".tabcl li").on('touchstart mousedown', function(e) {
+                e.preventDefault()
+                $(".tabcl .active").removeClass('active')
+                $(this).addClass('active')
+                tabclSwiper.slideTo($(this).index())
+            })
+            $(".tabcl li").click(function(e) {
+                e.preventDefault()
+            });
+            template.helper("SubStr", function(data) {
+                if (data == null)
+                    return "";
+                return data.length > 11 ? data.substring(0, 10) + "..." : data;
+            });
+            template.helper("timeFormat", function(time) {
+                return time.substring(11, 16);
+            });
+            template.helper("DateFormat", function(time) {
+                return time.replace('T', ' ').substring(0, 16);
+            });
+            template.helper("fixd", function(dec) {
+                if (dec == null)
+                    return "0.00";
+                else
+                    return dec.toFixed(2);
+            });
+            var h = $("#had").width() / 2;
+            $("#had").height(h);
+            loadAdver(); //加载广告图片
+            loadNiuRen(); //加载牛人推荐
+            loadDynamic(1, function() {
+                getOptimalList(1);
+                jscroller.refresh();
+            }); //加载交易动态
+            loadNews(1, function() {
+                setTimeout(function() {
+                    jscroller.refresh();
+                }, 100);
+            }); //加载资讯
+            setTimeout(function() {
+                var user = getUserInfo();
+                if (user) {
+                    loadUnReadMsgNum();
+                }
+            }, 1000 * 5);
+            api.addEventListener({
+                name: 'MessageBack'
+            }, function(ret, err) {
+                loadUnReadMsgNum();
+            });
+
+            var footHeight = $api.getStorage('footHeight');
+
+            $("#wrapper").height(api.winHeight - parseFloat(footHeight) - $(".search-form").height());
+
+            jscroller = new JRoll("#wrapper");
+            var tHtml = $("#template").html(); // 加载模板
+            jscroller.pulldown({ //下拉刷新
+                refresh: function(complete) {
+                    loadAdver(); //加载广告图片
+                    loadNiuRen();
+                    var user = getUserInfo();
+                    if (user) {
+                        showMessage();
+                        loadUnReadMsgNum();
+                    }
+                    $api.dom("#Trading").innerHTML = "";
+                    jscroller.options.page = 1;
+                    loadDynamic(1, function() {
+                        complete(); //完成加载
+                        jscroller.refresh();
+                        getOptimalList(1);
+                    });
+                    loadNews(1, function() {
+                        complete(); //完成加载
+                        jscroller.refresh();
+                    }); //加载资讯
+                }
+            });
+
+            GetZhiShu();
+            var user = getUserInfo();
+            if (user) {
+                showMessage();
+            }
+        };
+
+        var showMessage = function() {
+            //弹出系统公告和消息
+            sendGet(ServicesConifg.Message.QueryUnreadNotification, function(result) {
+                var _html = "";
+                template.config("escape", false);
+                if (result != "") {
+                    _html += template("messageTemplate", {
+                        List: result.list
+                    });
+                }
+                sendGet(ServicesConifg.Message.QuerySysUnreadMessages, function(result1) {
+                    if (result1 != "") {
+                        _html += template("messageTemplate", {
+                            List: result1.list
+                        });
+                    }
+                    if (_html.length > 174) {
+                        layer.open({
+                            content: _html,
+                            btn: '确认'
+                        });
+                    }
+                });
+            });
+        }
+        var loadUnReadMsgNum = function() {
+            var count = 0;
+            sendGet(ServicesConifg.Message.QuerySubMessagesCount, function(succ) {
+                if (succ > 0) {
+                    count += succ;
+                }
+                sendGet(ServicesConifg.Message.QuerySysMessagesCount, function(succ1) {
+                    if (succ1 > 0) {
+                        count += succ1;
+                    }
+                    if (count > 0) {
+                        $(".search-xiaoxi").html('<i class="iconfont icon-xiaoxi"></i><span>' + count + '</span>');
+                    } else {
+                        $(".search-xiaoxi").html('<i class="iconfont icon-xiaoxi"></i>');
+                    }
+                }, function(err1) {}, true);
+            }, function(err) {}, true);
+
+        }
+        var loadNiuRen = function() {
+            sendGet(ServicesConifg.Ranking.RecommendRanking, function(succ) {
+                $("#niuBox").html(template("template1", {
+                    list: succ
+                }));
+                var mySwiper1 = new Swiper('.swiper-container1', {
+                    freeMode: true,
+                    slidesPerView: 'auto',
+                });
+            });
+        };
+        var loadDynamic = function(page, _compile) {
+            sendPost(ServicesConifg.Position.QueryRealTimePosition, {
+                    pageIndex: page,
+                    pageSize: pageSize
+                },
+                function(succ) {
+                    if (succ.list.length > 0) {
+                        $("#Trading").html(template("templateTrading", {
+                            List: succ.list
+                        }));
+                        $("#TradingMore").show();
+                    } else {
+                        $("#TradingMore").hide();
+                        $("#Trading").html(template("templateNothing"));
+                    }
+                    if (_compile)
+                        _compile();
+                },
+                function(err) {
+                    if (_compile)
+                        _compile();
+                }
+            );
+        };
+
+        var getOptimalList = function(page) {
+            sendPost(ServicesConifg.Position.QueryOptimalPosition, {
+                    pageIndex: page,
+                    pageSize: pageSize
+                },
+                function(succ) {
+                    if (succ.list.length > 0) {
+                        $("#OptimalList").html(template("templateOptimalList", {
+                            List: succ.list
+                        }));
+                        $("#OptimalListMore").show();
+                    } else {
+                        $("#OptimalListMore").hide();
+                        $("#OptimalList").html(template("templateNothing"));
+                    }
+                },
+                function(err) {
+
+                });
+        };
+
+        var loadNews = function(page, _compile) {
+            sendGet(ServicesConifg.News.QueryHomeNewsList,
+                function(succ) {
+                    $("#newsList").html(template("templateNewsList", {
+                        list: succ.result
+                    }));
+                    if (_compile)
+                        _compile();
+                },
+                function(err) {
+                    if (_compile)
+                        _compile();
+                }
+            );
+        };
+
+        var search = function() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'search',
+                    url: 'search.html'
+                });
+            });
+        };
+
+        function Spread() {
+
+            checkLogin(function() {
+                api.openWin({
+                    name: 'spread',
+                    url: 'spread.html'
+                });
+            });
+        }
+
+        function goUserGains(uid) {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'userRecord',
+                    url: 'userRecord.html',
+                    pageParam: {
+                        userId: uid
+                    }
+                });
+            });
+        };
+
+        function SimulationTrade() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'simulationList',
+                    url: 'simulationList.html'
+                });
+            });
+        }
+
+        function goRank() {
+            api.openWin({
+                name: 'rank',
+                url: 'rank.html'
+            });
+        };
+
+        function goSelectStock() {
+            api.sendEvent({
+                name: 'goSelectStock'
+            });
+        };
+
+        function gotradeing() {
+            api.openWin({
+                name: 'tradeing',
+                url: 'tradeing.html'
+            });
+        };
+
+        function goOptimal() {
+            api.openWin({
+                name: 'optimal',
+                url: 'optimal.html'
+            });
+        };
+
+        function gonewslist() {
+            api.openWin({
+                name: 'newslist',
+                url: 'newslist.html',
+                slidBackEnabled: false
+            });
+        };
+
+        function gotrading() {
+            api.openWin({
+                name: 'trading',
+                url: 'trading.html'
+            });
+        };
+        var goNewsDetail = function(id) {
+            api.openWin({
+                name: 'newsdetail',
+                url: 'newsdetail.html',
+                pageParam: {
+                    id: id
+                }
+            });
+        }
+
+        var goBuy = function(code) {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'addStrategy',
+                    url: 'addStrategy.html',
+                    pageParam: {
+                        stockCode: code
+                    }
+                });
+
+            });
+
+        };
+
+        var goMessage = function() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'message',
+                    url: 'message.html'
+                });
+            });
+
+        };
+
+        function goSpread() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'spread',
+                    url: 'spread.html'
+                });
+            });
+        }
+
+        function goMyuserRecord() {
+            var user = getUserInfo();
+            checkLogin(function() {
+                api.openWin({
+                    name: 'userRecord',
+                    url: 'userRecord.html',
+                    pageParam: {
+                        userId: user.UserId
+                    }
+                });
+            });
+        }
+
+        function gosimulationList() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'simulationList',
+                    url: 'simulationList.html'
+                });
+            });
+        }
+
+        function goStockSchool() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'StockSchool',
+                    url: 'StockSchool.html'
+                });
+            });
+        }
+
+        var loadAdver = function() {
+            sendGet(ServicesConifg.Account.QueryAdvertising,
+                function(succ) {
+                    var template = "<div class=\"swiper-slide\" onclick=\"adClick('{Title}','{JumpUrl}')\"><img src=\"{imageUrl}\" onerror=\"this.src='../images/fkbban.jpg'\"/></div>";
+                    var result = "";
+                    for (var i in succ) {
+                        if (succ[i].Type == 0) {
+                            result += template
+                                .replace("{imageUrl}", succ[i].ImgUrl)
+                                .replace("{JumpUrl}", succ[i].JumpUrl)
+                                .replace("{Title}", succ[i].Title);
+                        }
+                    }
+                    $api.dom("#mainAd").innerHTML = result;
+                    var swiper = new Swiper('.swiper-container', {
+                        pagination: '.swiper-pagination',
+                        paginationClickable: true,
+                        loop: true,
+                        autoplay: 3500
+                    });
+                },
+                function(err) {
+
+                }
+            );
+        };
+
+        function adClick(title, url) {
+            api.openWin({
+                name: 'webpage',
+                url: 'webpage.html',
+                pageParam: {
+                    title: title,
+                    url: url
+                }
+            });
+        }
+
+        function goDetial(user_id) {
+            api.openWin({
+                name: 'userRecord',
+                url: 'userRecord.html',
+                pageParam: {
+                    userId: user_id
+                }
+            });
+        }
+
+        function AddSubscribe(user_id) {
+            showLoading("订阅中...");
+            sendPost(ServicesConifg.Subscribe.AddSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $("#btn_" + user_id).html("取消订阅");
+                $("#btn_" + user_id).attr("onclick", "CancelSubscribe(" + user_id + ")");
+                showToast("已订阅");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+
+        function CancelSubscribe(user_id) {
+            showLoading("取消订阅中...");
+            sendPost(ServicesConifg.Subscribe.CancelSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $("#btn_" + user_id).html("订阅");
+                $("#btn_" + user_id).attr("onclick", "AddSubscribe(" + user_id + ")");
+                showToast("已取消订阅");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+
+        function NiuRenMore() {
+            api.sendEvent({
+                name: 'goRank'
+            });
+
+        }
+        var newsimgerr = function(e) {
+            e.src = "../images/news-img.JPG";
+            e.onerror = null;
+        };
+
+        function GetZhiShu() {
+            api.ajax({
+                url: "http://api.quchaogu.com/app/stock/zhishu?from=dxw",
+                method: "get",
+                timeout: 10
+            }, function(data) {
+                var obj = data;
+                var list = $("#zhishulist li");
+                if (obj.code == 10000) {
+                    $(obj.data.zs_list).each(function(i, e) {
+                        $(list).each(function(ii, ee) {
+                            var spans = $(ee).find("span");
+                            if ($(spans[0]).html() == e.name) {
+                                if (e.price_change > 0) {
+                                    $(spans[1]).removeClass("green")
+                                    $(spans[1]).addClass("red")
+                                } else if (e.price_change < 0) {
+                                    $(spans[1]).removeClass("red")
+                                    $(spans[1]).addClass("green")
+                                }
+                                $(spans[1]).html(e.price);
+                                if (e.price_change > 0) {
+                                    $(spans[2]).find("i").eq(0).removeClass("green")
+                                    $(spans[2]).find("i").eq(0).addClass("red")
+                                } else if (e.price_change < 0) {
+                                    $(spans[2]).find("i").eq(0).removeClass("red")
+                                    $(spans[2]).find("i").eq(0).addClass("green")
+                                }
+                                $(spans[2]).find("i").eq(0).html(e.price_change);
+                                if (e.price_change > 0) {
+                                    $(spans[2]).find("i").eq(1).removeClass("green")
+                                    $(spans[2]).find("i").eq(1).addClass("red")
+                                } else if (e.price_change < 0) {
+                                    $(spans[2]).find("i").eq(1).removeClass("red")
+                                    $(spans[2]).find("i").eq(1).addClass("green")
+                                }
+                                $(spans[2]).find("i").eq(1).html(e.p_change);
+                            }
+                        });
+                    });
+                } else {
+                    showToast("读取指数失败");
+                }
+                setTimeout(GetZhiShu, 3000);
+            });
+        }
+    </script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .layui-m-layercont {
+            max-height: 400px;
+            overflow-y: scroll;
+            padding: 10px 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/template" id="messageTemplate">
+        <div>
+            <ul class="tk-new">
+                {{each List as value i}}
+                <li>
+                    <span class="tk-new-tit ell">{{value.Title}}</span>
+                    <span class="tk-new-con">
+                    {{value.Content}}
+                </span>
+                    <span class="tk-new-time"><i>{{if value.IsRead==undefined}}系统公告{{else}}系统消息{{/if}}</i>{{DateFormat(value.AddTime)}}</span>
+                </li>
+                {{/each}}
+            </ul>
+        </div>
+    </script>
+    <script type="text/template" charset="utf-8" id="templateNothing">
+        <div class="nothing" style="margin:50px auto;">
+            <img src="../images/nothing.png">
+        </div>
+    </script>
+    <script type="text/template" charset="utf-8" id="template1">
+        {{each list as value i}}
+        <div class="swiper-slide m-user">
+            <a href="#" onclick="goDetial({{value.user_id}})">
+                <img src="{{value.portrait}}" onerror="this.src='../images/general-tx.png'" />
+                <p class="name">{{value.nickname}}</p>
+                <p style="text-align:center">
+                    <span>总收益率:</span>
+                    <i class="{{if value.allgain > 0}}red{{else if value.allgain < 0 }}green{{/if}}">{{value.allgain.toFixed(2)}}%</i>
+                </p>
+                <p style="text-align:center">
+                    <span>月收益率:</span>
+                    <i class="{{if value.monthgain > 0}}red{{else if value.monthgain < 0 }}green{{/if}}">{{value.monthgain.toFixed(2)}}%</i>
+                </p>
+            </a>
+            {{if value.isSubscripe}}
+            <p><button id="btn_{{value.user_id}}" onclick="CancelSubscribe({{value.user_id}})" class="wcp-btn wcp-btn-pad01 wcp-btn-empty">取消订阅</button></p>
+            {{else}}
+            <p><button id="btn_{{value.user_id}}" onclick="AddSubscribe({{value.user_id}})" class="wcp-btn wcp-btn-pad01 wcp-btn-empty">订阅</button></p>
+            {{/if}}
+        </div>
+        {{/each}}
+    </script>
+    <script type="text/template" charset="utf-8" id="templateTrading">
+        {{each List as value}}
+        <li>
+            <div class="trade-dtbuy">
+                <img src="{{value.Portrait}}" onerror="this.src='../images/general-tx.png'">
+                <span class="trade-dtbuy-tit">{{SubStr(value.NickName)}}</span>
+                <span class="trade-dtbuy-gp">{{value.StockName}}<i>({{value.StockNum}}股)</i></span>
+                <span><button class="wcp-btn wcp-btn-pad04 wcp-btn-empty" onclick="goBuy('{{value.StockCode}}')">跟买</button></span>
+            </div>
+            <dl class="trade-dtinfo">
+                <dd>
+                    <span class="trade-dtinfo-tit">策略止盈：</span>
+                    <span class="trade-dtinfo-munb">{{fixd(value.GainPrice)}}</span>
+                </dd>
+                <dd>
+                    <span class="trade-dtinfo-tit">策略止损：</span>
+                    <span class="trade-dtinfo-munb">{{fixd(value.LossPrice)}}</span>
+                </dd>
+                <dd>
+                    <span class="trade-dtinfo-tit">买 入 价：</span>
+                    <span class="trade-dtinfo-munb">{{fixd(value.BuyPrice)}}</span>
+                </dd>
+                <dd>
+                    <span class="trade-dtinfo-tit">买入时间：</span>
+                    <span class="trade-dtinfo-munb">{{timeFormat(value.BuyTime)}}</span>
+                </dd>
+            </dl>
+        </li>
+        {{/each}}
+    </script>
+
+    <script type="text/template" id="templateOptimalList">
+        {{each List as value}}
+        <li>
+            <div class="trade-dtbuy">
+                <a onclick="goUserGains({{value.UserId}})">
+                    <img src="{{value.Portrait}}" onerror="this.src='../images/general-tx.png'">
+                    <span class="trade-dtbuy-tit">{{value.NickName}}</span>
+                </a>
+                <span class="trade-dtbuy-gp">{{value.StockName}}<i>({{value.StockCode}})</i></span>
+                <span><button class="wcp-btn wcp-btn-pad04 wcp-btn-empty" onclick="goBuy('{{value.StockCode}}')">跟买</button></span>
+            </div>
+            <div class="trade-dtzy">
+                <div>
+                    <span>收益率：<i class="trade-dtinfo-munb" style="color:red;">{{fixd(value.Rate)}}%</i></span>
+                    <span>买入价：<i class="trade-dtinfo-munb">{{fixd(value.BuyPrice)}}</i></span>
+                </div>
+                <div>
+                    <span>买入数量：<i class="trade-dtinfo-munb">{{value.StockNum}}</i></span>
+                    <span>持仓天数：<i class="trade-dtinfo-munb">{{value.KeepDay}}</i></span>
+                </div>
+                {{if value.isSubscripe}}
+                <button id="btn_{{value.UserId}}" onclick="CancelSubscribe({{value.UserId}})" class="wcp-btn wcp-btn-pad04 wcp-btn-empty">取消订阅</button> {{else}}
+                <button id="btn_{{value.UserId}}" onclick="AddSubscribe({{value.UserId}})" class="wcp-btn wcp-btn-pad04 wcp-btn-empty">订阅</button> {{/if}}
+            </div>
+        </li>
+        {{/each}}
+    </script>
+    <script type="text/template" charset="utf-8" id="templateNewsList">
+        {{each list as value}}
+        <li onclick="goNewsDetail('{{value.id}}')">
+            <img src="{{value.img}}" class="news-list-img" onerror="newsimgerr(this)">
+            <span class="news-list-tit"> {{value.title}}</span>
+            <span class="news-list-time">{{value.category}}<i>{{DateFormat(value.addtime)}}</i></span>
+        </li>
+        {{/each}}
+    </script>
+    <div id="searchbox">
+        <div class="search-form dis-s01">
+            <i class="iconfont icon-sousuo"></i>
+            <input type="text" class="search-text" placeholder="点击搜索股票" readonly="readonly" onclick="search()" />
+            <a href="#" onclick="goMessage()">
+                <div class="search-xiaoxi"><i class="iconfont icon-xiaoxi"></i>
+                    <!-- <span>4</span> -->
+                </div>
+            </a>
+        </div>
+    </div>
+    <div id="wrapper">
+        <div id="scrollerBox" class="scrollerBox">
+            <!-- ban -->
+            <div class="swiper-container" id="had">
+                <div class="swiper-wrapper" id="mainAd">
+                </div>
+                <!-- Add Pagination -->
+                <div class="swiper-pagination"></div>
+            </div>
+            <!-- 图标 -->
+            <div class="subnav wcp-first-box">
+                <ul>
+                    <li><a href="#" onclick="goSelectStock()"><i class="i1"></i><span>智能选股</span></a></li>
+                    <!-- <li><a href="#" onclick="goRank()"><i class="i2"></i><span>大赛排行</span></a></li> -->
+                    <li><a href="#"><i class="i3"  onclick="gonewslist()"></i><span>最新资讯</span></a></li>
+                    <li><a href="#"><i class="i4" onclick="goMessage()"></i><span>订阅消息</span></a></li>
+
+                    <li><a href="#" onclick="goStockSchool()"><i class="i5"></i><span>股票学堂</span></a></li>
+                    <!-- <li><a href="#" onclick="gosimulationList()"><i class="i6"></i><span>模拟大赛</span></a></li> -->
+                    <!-- <li><a href="#"><i class="i7"  onclick="goSpread()"></i><span>有奖推荐</span></a></li> -->
+                    <!-- <li><a href="#"><i class="i8" onclick="goMyuserRecord()"></i><span>我的战绩</span></a></li> -->
+                </ul>
+            </div>
+
+            <!-- 高手 -->
+            <!-- <div class="swiper-container1 wcp-second-box">
+                <h3 class="list-tit"><a href="#" onclick="goRank()">
+              牛人推荐<span>找大牛</span>
+              <i class="iconfont icon-icon"></i>
+          </a></h3>
+                <div class="swiper-wrapper" id="niuBox">
+
+                </div>
+            </div> -->
+
+            <!-- 指数 -->
+            <div>
+                <ul class="plate plate-dis" id="zhishulist">
+                    <li>
+                        <span class="palte-tit">上证指数</span>
+                        <span class="palte-munb">0000.00</span>
+                        <span><i>0.00</i><i>0.00%</i></span>
+                    </li>
+                    <li>
+                        <span class="palte-tit">深证成指</span>
+                        <span class="palte-munb">00000.00</span>
+                        <span><i>0.00</i><i>0.00%</i></span>
+                    </li>
+                    <li class="plate-last">
+                        <span class="palte-tit">创业板指</span>
+                        <span class="palte-munb">0000.00</span>
+                        <span><i>0.00</i><i>0.00%</i></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 交易动态 -->
+            <div class="tabcl">
+                <ul>
+                    <li class="active">策略动态</li>
+                    <li>最优策略</li>
+                </ul>
+            </div>
+            <div id="tabcl-container" class="tabcl-container" style="overflow:hidden">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <ul class="trade-dt wcp-first-box">
+                            <div id="Trading">
+
+                            </div>
+                            <li class="trade-dtmore" style="display:none;" id="TradingMore"><a onclick="gotradeing()">更多+</a></li>
+                        </ul>
+                    </div>
+                    <div class="swiper-slide">
+                        <ul class="trade-dt wcp-first-box">
+                            <div id="OptimalList"></div>
+                            <li class="trade-dtmore" style="display:none;" id="OptimalListMore"><a onclick="goOptimal()">更多+</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 资讯 -->
+            <div class="wcp-second-box">
+                <h3 class="list-tit"><a onclick="gonewslist()">资讯<span>更多</span><i class="iconfont icon-icon"></i></a></h3>
+                <div>
+                    <ul class="trade-dt news-box" id="newsList">
+
+                    </ul>
+                </div>
+            </div>
+            <div style="height:1rem;"></div>
+        </div>
+    </div>
+</body>
+
+</html>

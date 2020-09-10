@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>图片裁剪</title>
+    <link href="../css/api.css" type="text/css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="../css/style.css" />
+    <link rel="stylesheet" type="text/css" href="../css/aui.css" />
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <style type="text/css">
+        .aui-bar-nav {
+            background: rgba(0, 0, 0) !important;
+        }
+    </style>
+    <script type="text/javascript">
+        var FNImageClip;
+        _apiready = function() {
+            FNImageClip = api.require('FNImageClip');
+            FNImageClip.open({
+                rect: {
+                    x: 0,
+                    y: 50,
+                    w: api.winWidth,
+                    h: api.winHeight - 50
+                },
+                srcPath: api.pageParam.data,
+                highDefinition: true,
+                style: {
+                    mask: 'rgba(0,0,0,0.4)',
+                    clip: {
+                        w: 250,
+                        h: 250,
+                        x: (api.winWidth - 250) / 2,
+                        y: (api.winHeight - 300) / 2,
+                        borderColor: '#4876FF',
+                        borderWidth: 2,
+                        appearance: "rectangle"
+                    }
+                },
+                mode: "image",
+                fixedOn: api.frameName
+            });
+        };
+
+        var closewin = function() {
+            FNImageClip.close();
+            api.closeWin();
+        };
+
+        var ok = function() {
+            FNImageClip.save({
+                destPath: 'fs://image/temp' + new Date().getTime() + '.png',
+                copyToAlbum: false,
+                quality: 1
+            }, function(ret, err) {
+                if (ret) {
+                    var trans = api.require("trans");
+                    trans.decodeImgToBase64({
+                        imgPath: ret.destPath
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            showLoading("图片上传中..");
+                            sendPost(ServicesConifg.Account.UploadPortrait, {
+                                "portrait": "data:image/jpeg;base64," + ret.base64Str
+                            }, upSuccess, upFail, true, false);
+                        } else {
+                            showToast("图像截取失败");
+                        }
+                    });
+
+                } else {}
+            });
+        };
+
+        var upSuccess = function(succ) {
+            closeLoading();
+            showToast("上传成功", function() {
+                var user = getUserInfo();
+                user.UserPortrait = succ.Portrait;
+                saveUserInfo(user);
+                api.sendEvent({
+                    name: 'headChange'
+                });
+                api.closeWin();
+            }, 1000);
+        };
+        var upFail = function(err) {
+            showToast(err);
+        };
+    </script>
+</head>
+
+<body>
+    <header class="aui-bar aui-bar-nav">
+        <div class="aui-pull-left aui-btn" onclick="closewin()">
+            <span class="aui-iconfont aui-icon-close"></span>
+        </div>
+        <div class="aui-title">图片裁剪</div>
+        <div class="aui-pull-right aui-btn" onclick="ok()">
+            <span class="aui-iconfont aui-icon-correct"></span>
+        </div>
+    </header>
+</body>
+
+</html>

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>战绩</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/style.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <script type="text/javascript" src="../js/async.min.js"></script>
+    <script type="text/javascript" src="http://cdn.hcharts.cn/highcharts/highcharts.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../script/stick.js"></script>
+
+    <script type="text/javascript">
+        var shareUrl = "http://wechat.cnzjcf.com/Rank/UserGains?id=";
+        var shareTitle = "我的战绩";
+        var shareDescription = "快来看看我的牛逼战绩！！！";
+        var shareImage = "widget://images/wxShare.jpg";
+
+        var jroller, pJroller, hjroller;
+        window.onload = function() {
+            var tabsSwiper = new Swiper('#tabs-container', {
+                speed: 500,
+                onSlideChangeStart: function() {
+                    $(".tabs li.active").removeClass('active')
+                    $(".tabs li").eq(tabsSwiper.activeIndex).addClass('active')
+                }
+            })
+            $(".tabs li").on('touchstart mousedown', function(e) {
+                e.preventDefault()
+                $(".tabs li.active").removeClass('active')
+                $(this).addClass('active')
+                tabsSwiper.slideTo($(this).index())
+            });
+            document.querySelector('body').onscroll = function() {
+                $('body').scrollTop(0);
+            };
+        }
+        var stick;
+        var stopHeight = 0;
+        var isStop = false;
+        _apiready = function() {
+            template.helper("TimeFormat", function(dec) {
+                if (dec != null) {
+                    return dec.replace("T", " ").substring(0, dec.indexOf('.'));
+                } else {
+                    return "";
+                }
+            });
+            template.helper("fixd", function(dec) {
+                if (typeof(dec) == "string"); {
+                    dec = parseFloat(dec);
+                }
+                return dec.toFixed(2);
+            });
+            pJroller = new JRoll("#wrPosition");
+            hjroller = new JRoll("#wrHPosition");
+            pJroller.on("scroll", function() {
+                scrollReset(this.y);
+                if (this.y < -200) {
+                    showToTop(pJroller);
+                } else {
+                    hideToTop();
+                }
+            });
+
+            hjroller.on("scroll", function() {
+                scrollReset(this.y);
+                if (this.y < -200) {
+                    showToTop(hjroller);
+                } else {
+                    hideToTop();
+                }
+            });
+            var tHtml = $("#_templateHPos").html();
+            hjroller.infinite({ //上拉加载
+                getData: function(page, callback, errorCallback) {
+                    loadHistoryPosition(page, function(data) {
+                        callback(data);
+                    });
+                },
+                compile: function(text) { //重写模板引擎
+                    return template.compile(text);
+                },
+                template: tHtml
+            });
+            pJroller.disable();
+            hjroller.disable();
+            showLoading("数据加载中");
+            loadPageData(function() {
+                closeLoading();
+
+                stick = new Sticks($('#wrapper-tabs'), {
+                    top: $(".header").height(),
+                    isOverride: true,
+                    transform: true
+                });
+                stopHeight = stick.getOffsetTop() - $("#wrapper-tabs").height();
+
+                jroller = new JRoll("#wrapper", {
+                    maxY: -stopHeight
+                });
+                jroller.pulldown({
+                    refresh: function(complete) {
+                        loadPageData(function() {
+                            complete();
+                            jroller.refresh();
+                        });
+                    }
+                });
+                jroller.on("scroll", function() {
+                    var scrollValue = jroller.y * -1;
+                    if (scrollValue > 200) {
+                        var height = api.winHeight - $(".header").height() - $("#wrapper-tabs").height();
+                        $(".swiper-slide").height(height);
+                        isStop = true;
+                        pJroller.enable();
+                        hjroller.enable();
+                        pJroller.refresh();
+                        hjroller.refresh();
+
+                    }
+                    stick.setScroll(scrollValue);
+                });
+                jroller.on("scrollEnd", function() {
+                    if (isStop) {
+                        if (Math.abs(jroller.y) < stopHeight) {
+                            jroller.scrollTo(0, -stopHeight, 500);
+                        }
+                        jroller.disable();
+                    }
+                });
+
+                jroller.refresh();
+            }, true);
+        };
+
+        var scrollReset = function(y) {
+            if (y > 20) {
+                pJroller.disable();
+                hjroller.disable();
+                jroller.enable();
+                jroller.refresh();
+                isStop = false;
+                jroller.scrollTo(0, 0, 500);
+                stick.setScroll(0);
+            }
+        };
+        //异步化为同步计算
+        var loadPageData = function(complete, first) {
+            async.parallel([
+                function(done) {
+                    loadUserPosition(function() {
+                        done(null, 1);
+                    });
+                },
+                function(done) {
+                    loadRecord(function() {
+                        done(null, 2);
+                    });
+                },
+                function(done) {
+                    if (first) {
+                        done(null, 3);
+                    } else {
+                        hjroller.options.page = 1;
+                        loadHistoryPosition(1, function(data) {
+                            hjroller.infinite_callback(data); //直接调用上拉加载的方法
+                            done(null, 3);
+                        });
+                    }
+                }
+            ], function(err, result) {
+                if (result.length == 3) {
+                    complete();
+                } else {
+                    showToast("刷新失败");
+                    complete();
+                }
+            });
+        };
+
+
+        var loadRecord = function(end) {
+            var param = {
+                userid: api.pageParam.userId
+            };
+            shareUrl = "http://wechat.cnzjcf.com/Rank/UserGains?id=" + api.pageParam.userId;
+            sendPost(ServicesConifg.Ranking.UserGains, param, function(succ) {
+                shareTitle = succ.NickName + "的战绩";
+                $("#header").html(succ.NickName + "的战绩");
+                var html = template("template", succ);
+                $("#userInfo").html(html);
+
+                // 放大头像
+                $(".zj-tx").on("click", function() {
+                    $(".imgbox").show();
+                    $(".imgbox img").attr("src", $(this).attr("src"));
+                });
+                $(".body,.close,.shadow,.imgbox").on("click", function() {
+                    $(".imgbox").hide();
+                });
+
+                var data = succ.DayGainData;
+                var resultData = [];
+                for (var i in data) {
+                    resultData.push([
+                        translateTime(data[i].date),
+                        data[i].daygain
+                    ]);
+                }
+                loadUserChart(resultData);
+                if (end) {
+                    setTimeout(function() {
+                        end();
+                    }, 100);
+                }
+            }, function(err) {
+                if (end) {
+                    end();
+                }
+                showToast(err, function() {
+                    api.closeWin();
+                });
+            });
+        };
+
+        var loadUserChart = function(data) {
+            var chart = new Highcharts.Chart('container', {
+                title: {
+                    text: '大赛收益率曲线'
+                },
+                credits: {
+                    enabled: false
+                },
+                exporting: {
+                    enabled: false
+                },
+                yAxis: {
+                    title: {
+                        text: '收益率 (%)'
+                    }
+                },
+                xAxis: {
+                    type: "datetime",
+                    dateTimeLabelFormats: {
+                        day: "%m/%d"
+                    },
+                    tickInterval: 24 * 60 * 60 * 1000 //设置间隔喂一日
+                },
+                tooltip: {
+                    valueSuffix: '%',
+                    xDateFormat: "%Y/%m/%d"
+                },
+                legend: {
+                    verticalAlign: 'bottom',
+                    borderWidth: 0
+                },
+                series: [{
+                    name: '用户收益',
+                    data: data
+                }]
+            });
+
+        };
+        var goBuy = function(code) {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'addStrategy',
+                    url: 'addStrategy.html',
+                    pageParam: {
+                        stockCode: code
+                    }
+                });
+
+            });
+
+        };
+
+        //type 1 上证指数 2 深证指数
+        var loadsz = function(type, number, callback) {
+            var code = type == 1 ? "sse000001" : "szse399001";
+            var date = new Date().Format("yyyyMMddHHmmss");
+            var url = "http://webstock.quote.hermes.hexun.com/a/kline?code=" + code + "&start=" + date + "&number=-" + number + "&type=5";
+            api.ajax({
+                url: url,
+                method: 'get',
+                dataType: "text"
+            }, function(ret, err) {
+                if (ret) {
+                    var data = ret.substr(1, ret.length - 3);
+                    data = $api.strToJson(data);
+                    var dataResult = [];
+                    var userData = data.Data[0];
+                    for (var i in userData) {
+                        var zf = parseFloat(((userData[i][3] - userData[i][1]) / userData[i][1]) * parseFloat(100));
+                        dataResult.push([
+                            translateTime(userData[i][0]), parseFloat(zf.toFixed(2))
+                        ]);
+                    }
+                    callback(null, dataResult);
+                } else {
+                    callback(err, null);
+                }
+            });
+        }
+
+        function translateTime(tb) {
+            var year = tb.toString().substring(0, 4); //nian
+            var mi = tb.toString().substring(4, 6); //月
+            var dy = tb.toString().substring(6, 8); //月
+            var date = new Date(year + "/" + mi + "/" + dy + " 08:00:00");
+            return date.getTime();
+        }
+        var loadUserPosition = function(end) {
+            if (api.pageParam.userId) {
+                var param = {
+                    userid: api.pageParam.userId
+                };
+                sendPost(ServicesConifg.Position.QueryAllPosition, param,
+                    function(succ) {
+                        var html = template("templatePos", {
+                            List: succ
+                        });
+                        $("#userPosition").html(html);
+                        if (end)
+                            end();
+                    },
+                    function(err) {
+                        showToast(err);
+                        if (end)
+                            end();
+                    }
+                );
+            }
+        };
+
+        var loadHistoryPosition = function(page, _compile) {
+            $api.dom("#userHistoryPosition").innerHTML = "";
+            var url = ServicesConifg.Position.QueryAllHistoryList;
+            var param = {
+                pageIndex: page,
+                pageSize: 8,
+                userId: api.pageParam.userId
+            };
+            sendPost(url, param, function(succ) {
+                if (_compile) { //自定义渲染
+                    if (succ.isLastPage) {
+                        hjroller.options.total = page;
+                    }
+                    _compile(succ.list);
+                }
+            }, function(err) {
+                if (_compile)
+                    _compile();
+            });
+        };
+
+        var shareWeixin = function() {
+            var wx = api.require("wx");
+            wx.isInstalled(function(ret, err) {
+                if (ret.installed) {
+                    wx.shareWebpage({
+                        scene: 'session',
+                        title: shareTitle,
+                        description: shareDescription,
+                        thumb: shareImage,
+                        contentUrl: shareUrl
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            showToast('分享成功');
+                        } else {
+                            showToast('取消分享');
+                        }
+                    });
+                } else {
+                    showToast('当前设备未安装微信客户端');
+                }
+            });
+        };
+
+        var shareWeixinFrd = function() {
+            var wx = api.require("wx");
+            wx.isInstalled(function(ret, err) {
+                if (ret.installed) {
+                    wx.shareWebpage({
+                        scene: 'timeline',
+                        title: shareTitle,
+                        description: shareDescription,
+                        thumb: shareImage,
+                        contentUrl: shareUrl
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            showToast('分享成功');
+                        } else {
+                            showToast('取消分享');
+                        }
+                    });
+
+                } else {
+                    showToast('当前设备未安装微信客户端');
+                }
+            });
+
+        };
+
+        function AddSubscribe(elem, user_id) {
+            showLoading("订阅中...");
+            sendPost(ServicesConifg.Subscribe.AddSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $(elem).html("取消订阅");
+                $(elem).attr("onclick", "CancelSubscribe(this," + user_id + ")");
+                showToast("已订阅");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+
+        function CancelSubscribe(elem, user_id) {
+            showLoading("取消订阅中...");
+            sendPost(ServicesConifg.Subscribe.CancelSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $(elem).html("订阅");
+                $(elem).attr("onclick", "AddSubscribe(this," + user_id + ")");
+                showToast("已取消订阅");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+    </script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .zj-cc-con {
+            overflow-y: hidden !important;
+        }
+
+        .tabs li a {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="template" data-for="userInfo">
+        <div class="my-zj">
+            <img src="{{Portrait}}" class="zj-tx" onerror="this.src='../images/general-tx.png'" />
+            <div class="zj-zsy">
+                <span class="zj-zsy-tit">大赛总收益</span>
+                <span class="zj-zsy-con">{{Gain.toFixed(2)}}%</span>
+            </div>
+            <span class="zj-dy"><i class="iconfont icon-guanzhu1"></i>{{SubscribeNum}}</span> {{if IsSubscribe}}
+            <button onclick="CancelSubscribe(this,{{UserId}})" class="zj-dy-btn">已订阅</button> {{else}}
+            <button onclick="AddSubscribe(this,{{UserId}})" class="zj-dy-btn">订阅</button> {{/if}}
+        </div>
+        <div class="my-syl">
+            <ul>
+                <li class="my-syl-tit"><em class="bg-red">实盘</em></li>
+                <li style="width:42%;">
+                    <span class="zj-syt">策略数</span>
+                    <span class="zj-syl">{{Count}}</span>
+                </li>
+                <li style="width:42%;">
+                    <span class="zj-syt">胜率</span>
+                    <span class="zj-syl {{if Rate > 0}}red{{else if Rate < 0}}green{{/if}}">{{Rate.toFixed(2)}}%</span>
+                </li>
+                <li style="display:none;">
+                    <span class="zj-syt">总收益率</span>
+                    <span class="zj-syl {{if Allgain > 0}}red{{else if Allgain < 0}}green{{/if}}">{{Allgain.toFixed(2)}}%</span>
+                </li>
+            </ul>
+        </div>
+        <div class="my-syl">
+            <ul>
+              <li class="my-syl-tit"><em class="bg-orange">大赛</em></li>
+                <li>
+                    <span class="zj-syt">日收益率</span>
+                    <span class="zj-syl {{if DayGain > 0}}red{{else if DayGain < 0}}green{{/if}}">{{DayGain.toFixed(2)}}%</span>
+                </li>
+                <li>
+                    <span class="zj-syt">周收益率</span>
+                    <span class="zj-syl {{if WeekGain > 0}}red{{else if WeekGain < 0}}green{{/if}}">{{WeekGain.toFixed(2)}}%</span>
+                </li>
+                <li>
+                    <span class="zj-syt">月收益率</span>
+                    <span class="zj-syl {{if MonthGain > 0}}red{{else if MonthGain < 0}}green{{/if}}">{{MonthGain.toFixed(2)}}%</span>
+                </li>
+            </ul>
+        </div>
+    </script>
+    <script type="text/template" charset="utf-8" id="templatePos" data-for="userPosition">
+        {{each List as value i}}
+        <li>
+            <div class="zj-cc">
+                <span class="zj-cc-tit">
+                  {{if value.StrategyType==0}}
+                  <em class="bg-red">A股策略</em> {{else}}
+                  <em class="bg-orange">大赛策略</em> {{/if}}
+                  {{value.StockName}}<i>({{value.StockCode}})</i></span>
+                <span class="zj-cc-time" style="text-align:right; color:gray;">{{TimeFormat(value.BuyTime)}}</span>
+            </div>
+            <div class="zj-ccxq">
+                <span>买入价<i class="color1">{{fixd(value.BuyPrice)}}</i></span>
+                <span>保本价<i class="color1">{{fixd(value.StockPrice)}}</i></span>
+                <span>信用金<i class="color1">{{fixd(value.Money)}}</i></span>
+                <span>止盈价<i class="red">{{fixd(value.GainPrice)}}</i></span>
+                <span>股票数<i class="color1">{{value.StockNum}}</i></span>
+                <span>止损价<i class="green">{{fixd(value.LossPrice)}}</i></span>
+            </div>
+        </li>
+        {{/each}}
+    </script>
+    <script type="text/template" charset="utf-8" id="templateHPos">
+        {{each list as value}}
+        <li>
+            <div class="zj-cc">
+                <span class="zj-cc-tit">
+                  {{if value.StrategyType==0}}
+                  <em class="bg-red">A股策略</em> {{else}}
+                  <em class="bg-orange">大赛策略</em> {{/if}}
+                  {{value.StockName}}<i>({{value.StockCode}})</i></span>
+                <span class="zj-cc-yk">盈亏<em class="{{if value.TradeGain > 0}}red{{else if value.TradeGain < 0}}green{{/if}}">{{value.TradeGain}}</em></span>
+            </div>
+            <div class="zj-ccxq">
+                <span>买入价<i class="color1">{{fixd(value.BuyPrice)}}</i></span>
+                <span>保本价<i class="color1">{{fixd(value.StockPrice)}}</i></span>
+                <span>信用金<i class="color1">{{fixd(value.Money)}}</i></span>
+                <span>止盈价<i class="red">{{fixd(value.GainPrice)}}</i></span>
+                <span>股票数<i class="color1">{{value.StockNum}}</i></span>
+                <span>止损价<i class="green">{{fixd(value.LossPrice)}}</i></span>
+                <span>买入时间<i style="color: #999;margin-left: .3rem;font-size: .7rem;">{{TimeFormat(value.BuyTime)}}</i></span>
+                <span>卖出时间<i style="color: #999;margin-left: .3rem;font-size: .7rem;">{{TimeFormat(value.Time)}}</i></span>
+            </div>
+        </li>
+        {{/each}}
+    </script>
+    <script type="text/template" charset="utf-8" id="_templateHPos">
+        <li>
+            <div class="zj-cc">
+                <span class="zj-cc-tit">
+                  {{if StrategyType==0}}
+                  <em class="bg-red">A股策略</em> {{else}}
+                  <em class="bg-orange">大赛策略</em> {{/if}}
+                  {{StockName}}<i>({{StockCode}})</i></span>
+                <span class="zj-cc-yk">盈亏<em class="{{if TradeGain > 0}}red{{else if TradeGain < 0}}green{{/if}}">{{TradeGain}}</em></span>
+            </div>
+            <div class="zj-ccxq">
+                <span>买入价<i class="color1">{{fixd(BuyPrice)}}</i></span>
+                <span>保本价<i class="color1">{{fixd(StockPrice)}}</i></span>
+                <span>信用金<i class="color1">{{fixd(Money)}}</i></span>
+                <span>止盈价<i class="red">{{fixd(GainPrice)}}</i></span>
+                <span>股票数<i class="color1">{{StockNum}}</i></span>
+                <span>止损价<i class="green">{{fixd(LossPrice)}}</i></span>
+                <span>买入时间<i style="color: #999;margin-left: .3rem;font-size: .7rem;">{{TimeFormat(BuyTime)}}</i></span>
+                <span>卖出时间<i style="color: #999;margin-left: .3rem;font-size: .7rem;">{{TimeFormat(Time)}}</i></span>
+            </div>
+        </li>
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit" id="header">
+            --的战绩
+        </div>
+        <a class="right-ico share" href="javascript:;"></a>
+    </div>
+    <div class="ui-container" id="wrapper">
+        <div id="scroller">
+            <!-- my-infor -->
+            <div class="wcp-first-box" id="userInfo">
+                <div class="my-zj">
+                    <img src="../images/general-tx.png" class="zj-tx">
+                    <div class="zj-zsy">
+                        <span class="zj-zsy-tit">总收益</span>
+                        <span class="zj-zsy-con">0%</span>
+                    </div>
+                    <span class="zj-dy"><i class="iconfont icon-guanzhu1"></i>0订阅</span>
+                </div>
+                <div class="my-syl">
+                    <ul>
+                        <li>
+                            <span class="zj-syt">日收益率</span>
+                            <span class="zj-syl">0.00%</span>
+                        </li>
+                        <li>
+                            <span class="zj-syt">周收益率</span>
+                            <span class="zj-syl">0.00%</span>
+                        </li>
+                        <li>
+                            <span class="zj-syt">月收益率</span>
+                            <span class="zj-syl">0.00%</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 曲线图 -->
+            <div class="wcp-second-box">
+                <div id="container" style="width:100%; height:300px;"></div>
+            </div>
+
+            <!-- 2-tab -->
+            <div class="tabs" id="wrapper-tabs">
+                <ul>
+                    <li class="active"><a href="#">持仓</a></li>
+                    <li><a href="#">记录</a> </li>
+                </ul>
+            </div>
+            <div id="tabs-container" class="swiper-container">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide" id="wrPosition">
+                        <ul class="zj-cc-con" id="userPosition">
+
+
+                        </ul>
+                    </div>
+                    <div class="swiper-slide" id="wrHPosition">
+                        <ul class="zj-cc-con" id="userHistoryPosition">
+
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div style="height:3rem;">&nbsp;</div>
+        </div>
+    </div>
+    <!-- 隐藏信息-分享 -->
+    <div class="share_panel">
+        <h2>分享到</h2>
+        <ul>
+            <li>
+                <a href="#" onclick="shareWeixin()">
+                    <img src="../images/btn_share_wx.png">
+                    <span>微信</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="shareWeixinFrd()">
+                    <img src="../images/btn_share_pyq.png">
+                    <span>朋友圈</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <!-- 遮罩层  -->
+    <div class="mask"></div>
+    <!-- 弹框 -->
+    <div class="imgbox">
+        <div class="shadow"></div>
+        <div class="imgbox-con">
+            <i class="close"></i>
+            <img src="">
+        </div>
+    </div>
+</body>
+
+</html>

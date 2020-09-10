@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>资讯</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #f8f8f8;
+        }
+    </style>
+</head>
+
+<body style="background-color:#fff;">
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit" id="header">
+            资讯
+        </div>
+    </div>
+    <!-- 切换 -->
+    <div id="header-top">
+        <div class="swiper-wrapper" id="newsChannel">
+
+        </div>
+    </div>
+    <div id="wrapper">
+        <div id="scrollerBox" class="scrollerBox" style=" margin-bottom:6rem;">
+            <!-- top-down -->
+            <div class="mar-top">
+                <ul class="news-box news-list-box" id="newsListBox">
+
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/template" id="template">
+        <li onclick="goNewsDetail({{id}})">
+            <img src="{{img}}" class="news-list-img" onerror="newsimgerr(this)">
+            <span class="news-list-tit"> {{title}}</span>
+            <span class="news-list-time">{{category}}<i>{{DateFormat(addtime)}}</i></span>
+            <i class="iconfont icon-icon"></i>
+        </li>
+    </script>
+    <script type="text/template" charset="utf-8" id="templateNewsChannel">
+        {{each List as value i}}
+        <div onclick="getnewslist({{value.id}})" class="swiper-slide {{if i==0}}header-top-cur{{/if}}">{{value.cname}}</div>
+        {{/each}}
+    </script>
+
+    <script type="text/javascript">
+        var jscroller;
+        var pageSize = 10;
+        var channelid = 0;
+        _apiready = function() {
+            window.onscroll = function() {
+                $('html,body').animate({
+                    scrollTop: '0px'
+                }, 100);
+            }
+            template.helper("DateFormat", function(time) {
+                return time.replace('T', ' ').substring(0, 16);
+            });
+
+            jscroller = new JRoll("#wrapper");
+
+            getNewsChannel(function() {
+                var tHtml = $("#template").html(); // 加载模板
+                jscroller.infinite({ //上拉加载
+                    getData: function(page, callback, errorCallback) {
+                        if (page) {
+                            loadNewsList(page, function(data) {
+                                callback(data);
+                                jscroller.refresh();
+                                setTimeout(function() {
+                                    jscroller.refresh();
+                                }, 1000);
+                            });
+                        }
+                    },
+                    compile: function(text) { //重写模板引擎
+                        return template.compile(text);
+                    },
+                    template: tHtml,
+                    targetId: "newsListBox"
+                });
+                jscroller.pulldown({ //下拉刷新
+                    refresh: function(complete) {
+                        $("#newsListBox").html("");
+                        jscroller.options.page = 1;
+                        loadNewsList(1, function(data) {
+                            jscroller.infinite_callback(data); //直接调用上拉加载的方法
+                            complete(); //完成加载
+                            jscroller.refresh();
+                            setTimeout(function() {
+                                jscroller.refresh();
+                            }, 1000);
+                        });
+                    }
+                });
+            });
+        };
+
+        var getNewsChannel = function(callback) {
+            sendGet(ServicesConifg.News.QueryChannel, function(succ) {
+                $("#newsChannel").append(template("templateNewsChannel", {
+                    List: succ
+                }));
+                channelid = succ[0].id;
+                var mySwiper1 = new Swiper('#header-top', {
+                    freeMode: true,
+                    slidesPerView: 'auto',
+                });
+                $("#header-top .swiper-slide").click(function() {
+                    $(this).addClass("header-top-cur").siblings().removeClass("header-top-cur");
+                });
+                if (callback)
+                    callback();
+            }, function(err) {}, true);
+        }
+
+        var loadNewsList = function(page, _compile) {
+            showLoading();
+            sendPost(ServicesConifg.News.QueryNewsList, {
+                    pageIndex: page,
+                    pageSize: pageSize,
+                    channelId: channelid
+                },
+                function(succ) {
+                    closeLoading();
+                    if (_compile) { //自定义渲染
+                        if (succ.isLastPage) {
+                            jscroller.options.total = page;
+                        }
+                        _compile(succ.result);
+                    }
+                },
+                function(err) {
+                    closeLoading();
+                    if (_compile) {
+                        jscroller.options.total = page;
+                        _compile([]);
+                    }
+                }
+            );
+        };
+        var goNewsDetail = function(id) {
+            api.openWin({
+                name: 'newsdetail',
+                url: 'newsdetail.html',
+                pageParam: {
+                    id: id
+                }
+            });
+        }
+        var getnewslist = function(id) {
+            channelid = id;
+            page = 1;
+            jscroller.scrollTo(0, 0, 200);
+            jscroller.options.total = 999;
+            $("#newsListBox").html("");
+            loadNewsList(1, function(data) {
+                jscroller.infinite_callback(data); //直接调用上拉加载的方法
+            });
+        }
+        var newsimgerr = function(e) {
+            e.src = "../images/news-img.JPG";
+            e.onerror = null;
+        };
+    </script>
+</body>
+
+</html>

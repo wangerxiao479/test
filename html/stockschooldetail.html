@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>股票学堂详情</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body style="background-color:#fff;">
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit" id="header">
+            股票学堂详情
+        </div>
+    </div>
+    <div id="wrapper">
+        <div id="scrollerBox" class="scrollerBox">
+            <div class="wcp-first-box">
+                <div class="news-con-tit">
+                    <h3 id="title"></h3>
+                    <span id="category"></span>
+                    <i id="addtime"></i>
+                </div>
+                <div class="news-con" id="content" style="overflow:hidden;">
+                </div>
+                <div style="height:3rem;"></div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        _apiready = function() {
+            window.onscroll = function() {
+                $('html,body').animate({
+                    scrollTop: '0px'
+                }, 100);
+            }
+            var jscroller = new JRoll("#wrapper");
+            showLoading();
+            sendPost(ServicesConifg.StockSchool.QueryDetail, {
+                    id: api.pageParam.id
+                },
+                function(succ) {
+                    $("#title").html(succ.title);
+                    if (succ.type == 0) {
+                        $("#category").html("每日解盘");
+                    } else if (succ.type == 1) {
+                        $("#category").html("入门教程");
+                    } else {
+                        $("#category").html("精选战法");
+                    }
+
+                    $("#addtime").html(succ.addtime.replace('T', ' ').substring(0, 16));
+                    var videohtml = "";
+                    if (succ.atta_url != "" && succ.atta_url != null) {
+                        videohtml = "<div style='margin:0 auto; width:100%;'><video src='" + succ.atta_url + "' autoplay='autoplay' controls='controls'></video></div>"
+                    } else if (succ.ext_link != "" && succ.ext_link != null) {
+                        videohtml = '<iframe src="' + succ.ext_link + '" style="width:100%;height:380px;margin:0 auto;border:none;overflow:hidden;"></iframe>'
+                    }
+                    $("#content").html(videohtml + succ.content + "<br><br>");
+                    closeLoading();
+                    jscroller.refresh();
+                    setTimeout(function() {
+                        jscroller.refresh();
+                    }, 1000);
+                },
+                function(err) {
+                    closeLoading();
+                    api.closeWin();
+                }
+            );
+            jscroller.on("scroll", function() {
+                if (this.y < -200) {
+                    showToTop(jscroller);
+                } else {
+                    hideToTop();
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

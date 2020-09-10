@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>充值</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+
+    <script type="text/javascript">
+        _apiready = function() {
+            $("#money").html(api.pageParam.money);
+            var user = getUserInfo();
+          //  $("#card").val(user.BankCard);
+          //  $("#realname").val(user.RealName);
+        //    $("#idcard").val(user.UserCer);
+            $("#phone").val(user.Phone.substring(5,11));
+
+            sendGet(ServicesConifg.SysConfig.QueryRechargeMessage, function(succ) {
+                $("#rechargemessage").html(succ.RechargeMessage);
+            }, function(err) {});
+        };
+        var orderNum = "";
+
+        function SendSmsCode() {
+            var cardMo = $("#idcard").val();
+            var payAccNo = $("#card").val();
+            var realName = $("#realname").val();
+            var payMobile = $("#phone").val();
+            if (cardMo == "" && cardMo.length != 18) {
+                layer.open({
+                    content: "请输入正确的身份证号码",
+                    skin: 'msg',
+                    time: 3
+                });
+                return;
+            }
+            if (payAccNo == "") {
+                layer.open({
+                    content: "请输入银行卡号",
+                    skin: 'msg',
+                    time: 3
+                });
+                return;
+            }
+            if (payMobile == "" && payMobile.length != 11) {
+                layer.open({
+                    content: "请输入正确的手机号码",
+                    skin: 'msg',
+                    time: 3
+                });
+                return;
+            }
+            if (realName == "") {
+                layer.open({
+                    content: "请输入姓名",
+                    skin: 'msg',
+                    time: 3
+                });
+                return;
+            }
+            sendPost(ServicesConifg.Account.Recharge, {
+                money: api.pageParam.money,
+                payBy: 8,
+                cardMo: cardMo,
+                payAccNo: payAccNo,
+                realName: realName,
+                payMobile: payMobile
+            }, function(result) {
+                orderNum = result.tranNo;
+                settime($("#sendsmscodebtn"));
+                $("#paybtn").attr('disabled', false);
+            }, function(err) {
+                showToast(err);
+            });
+        }
+
+        function submit() {
+            //$("#paybtn").attr('disabled', true);
+            var code = $("#smscode").val();
+            if (orderNum == "") {
+                layer.open({
+                    content: "订单号不存在",
+                    skin: 'msg',
+                    time: 3
+                });
+                return;
+            }
+            if (code == "") {
+                layer.open({
+                    content: "请输入短信验证码",
+                    skin: 'msg',
+                    time: 3
+                });
+                $("#paybtn").attr('disabled', false);
+                return;
+            }
+            sendPost(ServicesConifg.Account.KuaijieUnionPay, {
+                orderid: orderNum,
+                smsCode: code
+            }, function(result) {
+                api.execScript({
+                    name: 'account',
+                    script: '_apiready();'
+                });
+                //这里去查询支付状态
+                api.closeToWin({
+                    name: 'account'
+                });
+            }, function(err) {
+                showToast(err);
+            });
+        }
+
+        var countdown = 120;
+
+        function settime(obj) {
+            if (countdown == 0) {
+                obj.attr('disabled', false);
+                obj.text("点击获取验证码");
+                countdown = 60;
+                return;
+            } else {
+                obj.attr('disabled', true);
+                obj.text("重新发送(" + countdown + ")");
+                countdown--;
+            }
+            setTimeout(function() {
+                settime(obj)
+            }, 1000)
+        }
+
+function copyArticle(ele) {
+const range = document.createRange();
+range.selectNode(document.getElementById(ele));
+
+const selection = window.getSelection();
+if(selection.rangeCount > 0) selection.removeAllRanges();
+selection.addRange(range);
+document.execCommand('copy');
+alert("复制成功！");
+}
+
+    </script>
+</head>
+
+<body>
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            银联转账
+        </div>
+    </div>
+    <div class="ui-container">
+        <div class="wcp-first-box">
+
+        </div>
+
+
+        <div class="wcp-second-box wcp-dl  wcp-dl-border">
+            <div id="rechargemessage">
+              
+            </div>
+            <dl>
+                <dt>转账备注码</dt>
+                <dd><input type="text" id="phone"   class="textinput"  value="" /></dd>
+            </dl>
+
+        </div>
+        <div id="a1222" style="margin-left: 0.85rem;font-size:12px;color:red">请复制以上信息到网银转账，注意填写转账备注码</div>
+
+
+        <!-- <p class="prompt">1、支持的银行有：<span style="color:#72ACE3;">中国银行、建设银行、工商银行、光大银行、邮储银行、交通银行、农业银行</span>。</p>
+        <p class="prompt">2、有问题请联系客服电话：<a href="tel:4001881907">400-188-1907</a> QQ：3209529291 微信：zjcfclpt001。</p>
+        <div class="fill-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-red" id="paybtn" onclick="submit()">确认付款</button></div> -->
+    </div>
+</body>
+
+</html>

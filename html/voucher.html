@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>我的卡券</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            template.helper("subStr", function(str) {
+                if (str.length > 12) {
+                    return str.substring(0, 12) + "..."
+                } else {
+                    return str;
+                }
+            });
+            loadTicks();
+        };
+        var loadTicks = function() {
+            showLoading();
+            sendGet(ServicesConifg.Account.QueryTicket, function(succ) {
+                var tmode = api.pageParam.TradeMode + 1;
+                var list = $.grep(succ.unUseList, function(n, i) {
+                    return n.LowMoney <= api.pageParam.Money && (n.TradeMode == 0 || n.TradeMode == tmode)
+                });
+                $("#useCard").html(template("templateVoucher", {
+                    List: list
+                }));
+                closeLoading();
+            }, function() {
+                closeLoading();
+            })
+        };
+        var selectTicket = function(id, money, lowmoney, type) {
+            api.sendEvent({
+                name: 'selectTicket',
+                extra: {
+                    Id: id,
+                    Money: money,
+                    LowMoney: lowmoney,
+                    Type: type
+                }
+            });
+            api.closeWin();
+        };
+    </script>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="templateVoucher">
+        {{each List as value}}
+        <li onclick="selectTicket({{value.ID}},{{value.Money}},{{value.LowMoney}},{{value.Type}})">
+            <div class="vou-mo">
+                <img src="../images/voucher.png" />
+                <div class="vou-money">
+                    <span class="vou-money-tit"><i>￥</i>{{value.Money}}</span>
+                    <span class="vou-money-sm">满{{value.LowMoney}}使用</span>
+                </div>
+            </div>
+            <span class="vou-tit">{{if value.Type==0}}信用金抵用券{{else if value.Type==1}}延期手续费抵用券{{else}}信息服务费抵用券{{/if}}</span>
+            <span class="vou-time">{{value.AddTime}}-{{value.EndTime}}</span>
+            <span class="vou-sm">{{subStr(value.Name)}}-{{value.Status}}</span> {{if value.Status=="已使用"}}
+            <p class="vou-zt vou-ysy"></p>
+            {{else if value.Status=="已过期"}}
+            <p class="vou-zt vou-ygq"></p>
+            {{/if}}
+        </li>
+        {{/each}}
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            选择卡卷
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+
+    <!-- tab -->
+    <div id="tabs-container" class="swiper-container ui-container">
+        <ul class="vou-con" id="useCard">
+
+        </ul>
+    </div>
+</body>
+
+</html>

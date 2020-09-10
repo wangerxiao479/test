@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>有奖推广</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/style.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <script type="text/javascript" src="../js/async.min.js"></script>
+    <script type="text/javascript" src="../js/jquery.qrcode.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        var shareUrl = "http://wechat.niuchaogu.com/UserCenter/Gift?code=";
+        var shareTitle = "邀请有礼";
+        var shareDescription = "你的好友正在使用牛炒股；邀请您参与“邀请有礼”，您将在投资后，免费获得实盘资金。赶快行动起来吧！！！";
+        var shareImage = "widget://images/wxShare.jpg";
+
+        _apiready = function() {
+            template.helper("TimeFormat", function(dec) {
+                if (dec != null) {
+                    return dec.replace("T", " ").substring(0, dec.indexOf('.'));
+                } else {
+                    return "";
+                }
+            });
+            var user = getUserInfo();
+            if (user.RecommendCode) {
+                shareUrl = "http://wechat.niuchaogu.com/UserCenter/Gift?code=" + user.RecommendCode;
+                $("#recommendCode").html(user.RecommendCode);
+            } else {
+                shareUrl = "http://wechat.niuchaogu.com/UserCenter/Gift?code=" + user.Phone;
+                $("#recommendCode").html("您的手机号");
+            }
+            $('#qrcode').qrcode({
+                width: 8.1 * 16,
+                height: 8.1 * 16,
+                text: shareUrl
+            });
+            jscroller = new JRoll("#wrapper");
+            var tHtml = $("#template").html(); // 加载模板
+            jscroller.infinite({ //上拉加载
+                getData: function(page, callback, errorCallback) {
+                    loadPageData(page, function(data) {
+                        callback(data);
+                    });
+                },
+                compile: function(text) { //重写模板引擎
+                    return template.compile(text);
+                },
+                template: tHtml,
+                targetId: "content",
+                completeTip: '<div class="jroll-infinite-tip" style="display:none"></div>',
+                isShowEmpty: false
+            });
+            jscroller.pulldown({ //下拉刷新
+                refresh: function(complete) {
+                    $api.dom("#content").innerHTML = "";
+                    jscroller.options.page = 1;
+                    loadPageData(1, function(result) {
+                        jscroller.infinite_callback(result); //直接调用上拉加载的方法
+                        complete();
+                    });
+                }
+            });
+
+        };
+
+        var loadPageData = function(page, complete) {
+            async.parallel([
+                function(done) {
+                    if (page == 1) {
+                        loadSpreadInfo(function() {
+                            done(null, 1);
+                        });
+                    } else {
+                        done(null, 0);
+                    }
+                },
+                function(done) {
+                    loadSpreadUser(page, function(data) {
+                        done(null, data);
+                    });
+                }
+            ], function(err, result) {
+                if (result.length == 2) {
+                    complete(result[1]);
+                } else {
+                    showToast("刷新失败");
+                    complete();
+                }
+            });
+        };
+
+        var loadSpreadInfo = function(end) {
+            sendGet(ServicesConifg.Account.QueryPromotionInfo,
+                function(succ) {
+                    $api.dom("#tgContent").innerHTML = template("templateInfo", succ);
+                    if (end)
+                        end();
+                },
+                function(err) {
+                    showToast(err);
+                });
+        };
+
+        var loadSpreadUser = function(page, _compile) {
+            showLoading("加载已推广人员");
+            sendPost(ServicesConifg.Account.QueryPromotionList, {
+                pageIndex: page,
+                pageSize: 10
+            }, function(succ) {
+                if (_compile) { //自定义渲染
+                    if (succ.isLastPage) {
+                        jscroller.options.total = page;
+                    }
+                    _compile(succ.data);
+                }
+                closeLoading();
+            }, function(err) {
+                closeLoading();
+            });
+        };
+
+
+        var shareWeixin = function() {
+            var wx = api.require("wx");
+            wx.isInstalled(function(ret, err) {
+                if (ret.installed) {
+                    wx.shareWebpage({
+                        scene: 'session',
+                        title: shareTitle,
+                        description: shareDescription,
+                        thumb: shareImage,
+                        contentUrl: shareUrl
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            showToast('分享成功');
+                        } else {
+                            showToast('取消分享');
+                        }
+                    });
+                } else {
+                    showToast('当前设备未安装微信客户端');
+                }
+            });
+        };
+
+        var shareWeixinFrd = function() {
+            var wx = api.require("wx");
+            wx.isInstalled(function(ret, err) {
+                if (ret.installed) {
+                    wx.shareWebpage({
+                        scene: 'timeline',
+                        title: shareTitle,
+                        description: shareDescription,
+                        thumb: shareImage,
+                        contentUrl: shareUrl
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            showToast('分享成功');
+                        } else {
+                            showToast('取消分享');
+                        }
+                    });
+
+                } else {
+                    showToast('当前设备未安装微信客户端');
+                }
+            });
+
+        };
+    </script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        td {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="templateInfo">
+        <h3 class="list-tit">推广列表<span>已推广：{{UserCount}}人</span></h3>
+        <ul class="det-list">
+            <li><span>昨日提成：</span>{{PreCommission}}(元)</li>
+            <li><span>昨日策略：</span>{{PreStatistics}}(元)</li>
+            <li><span>提成总计：</span>{{AllCommission}}(元)</li>
+            <li><span>策略总计：</span>{{Statistics}}(元)</li>
+        </ul>
+    </script>
+    <script type="text/template" charset="utf-8" id="template">
+        <tr>
+            <td style="text-align:center;">{{nickname}}</td>
+            <td style="text-align:center;" class="table-sm">{{TimeFormat(addtime)}}</td>
+            <td style="text-align:center;" class="text-center">{{count}}</td>
+            <td style="text-align:center;" class="table-sm">{{TimeFormat(time)}}</td>
+        </tr>
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            有奖推广
+        </div>
+    </div>
+    <div class="ui-container" id="wrapper">
+        <div id="scroller">
+            <!-- ewm -->
+            <div class="wcp-first-box">
+                <h4 class="ewm-tit1">邀请您的小伙伴来赚钱啦！</h4>
+                <img class="ewm-img" src="../images/ewm.png">
+                <div id="qrcode" style="position: absolute;background-color: red;height: 8.1rem;width: 8.1rem;top: 4.3rem;right: 8.7rem;"></div>
+                <h4 class="ewm-tit2">您的邀请码为<i id="recommendCode"></i></h4>
+                <ul class="ewm-fx">
+                    <li>
+                        <a href="#" onclick="shareWeixin()">
+                            <img src="../images/btn_share_wx.png">
+                            <span>微信</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="shareWeixinFrd()">
+                            <img src="../images/btn_share_pyq.png">
+                            <span>朋友圈</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <!-- det-list -->
+            <div class="wcp-second-box" id="tgContent">
+
+            </div>
+            <!-- table -->
+            <div class="wcp-second-box">
+                <table class="table-list">
+                    <thead>
+                        <tr class="text-center">
+                            <td style="width:28%">用户名</td>
+                            <td style="width:28%">推广时间</td>
+                            <td style="width:16%">策略笔数</td>
+                            <td style="width:28%">策略最后发布时间</td>
+                        </tr>
+                    </thead>
+                    <tbody id="content">
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

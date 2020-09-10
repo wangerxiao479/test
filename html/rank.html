@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>首页</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../script/stick.js"></script>
+    <script type="text/javascript">
+        var pageSize = 15;
+        var jroller;
+        var stick;
+        var tabsSwiper;
+        var stopHeight;
+        var isStop = false;
+        var dayRankIsLoad = false;
+        var weekRankIsLoad = false;
+        var monthRankIsLoad = false;
+        var quarterRankIsLoad = false;
+        var sall, sday, sweek, smonth, quarter;
+        _apiready = function() {
+
+            template.helper("SubStr", function(data) {
+                if (data == null)
+                    return "";
+                return data.length > 11 ? data.substring(0, 11) : data;
+            });
+
+            JRoll.prototype.isLoadData = false; //初始化对象属性
+            uiInit();
+            loadAdver();
+            loadNiuRen();
+            initJroller();
+            loadRanks("allRank", ServicesConifg.Ranking.GainRanking);
+
+            document.querySelector('body').onscroll = function() {
+                $('body').scrollTop(0);
+            };
+        };
+
+        var initJroller = function() {
+            setTimeout(function() {
+                stopHeight = $('#wrapper-tabs').offset().top - $("#wrapper-tabs").height() - (htmlFontSize * 0.5);
+                jroller = new JRoll("#wrapper", {
+                    maxY: -stopHeight
+                });
+                var footHeight = $api.getStorage('footHeight');
+                var mheight = api.winHeight - $(".header").height() - $(".navbar-wrapper").height() - parseFloat(footHeight);
+
+                $("#tabs-container .swiper-slide .rank-cbox").height(mheight);
+                sall = new JRoll("#sall");
+                sday = new JRoll("#sday");
+                sweek = new JRoll("#sweek");
+                smonth = new JRoll("#smonth");
+                quarter = new JRoll("#quarter");
+                sall.on('scroll', function() {
+                    if ((Math.abs(this.y) - Math.abs(sall.maxScrollY)) > 5) {
+                        if (this.isLoadData == false) {
+                            this.isLoadData = true;
+                            sall.disable();
+                            loadRanks("allRank", ServicesConifg.Ranking.GainRanking, function() {
+                                sall.enable();
+                                sall.refresh();
+                                sall.isLoadData = false;
+                            });
+                        }
+                    }
+
+                    if (this.y > 10) {
+
+                        resetManScroller();
+                    }
+                    if (this.y < -200) {
+                        showToTop(sall);
+                    } else {
+                        hideToTop();
+                    }
+                });
+                sday.on('scroll', function() {
+                    if ((Math.abs(this.y) - Math.abs(sday.maxScrollY)) > 5) {
+                        if (this.isLoadData == false) {
+                            this.isLoadData = true;
+                            sday.disable();
+                            loadRanks("dayRank", ServicesConifg.Ranking.DayRanking, function() {
+                                sday.enable();
+                                sday.refresh();
+                                sday.isLoadData = false;
+                            });
+                        }
+                    }
+                    if (this.y > 10) {
+
+                        resetManScroller();
+                    }
+                    if (this.y < -200) {
+                        showToTop(sday);
+                    } else {
+                        hideToTop();
+                    }
+                });
+                sweek.on('scroll', function() {
+                    if ((Math.abs(this.y) - Math.abs(sweek.maxScrollY)) > 5) {
+                        if (this.isLoadData == false) {
+                            this.isLoadData = true;
+                            sweek.disable();
+                            loadRanks("weekRank", ServicesConifg.Ranking.WeekRanking, function() {
+                                sweek.enable();
+                                sweek.refresh();
+                                sweek.isLoadData = false;
+                            });
+                        }
+                    }
+                    if (this.y > 10) {
+
+                        resetManScroller();
+                    }
+                    if (this.y < -200) {
+                        showToTop(sweek);
+                    } else {
+                        hideToTop();
+                    }
+                });
+                smonth.on('scroll', function() {
+                    if ((Math.abs(this.y) - Math.abs(smonth.maxScrollY)) > 5) {
+                        if (this.isLoadData == false) {
+                            this.isLoadData = true;
+                            smonth.disable();
+                            loadRanks("monthRank", ServicesConifg.Ranking.MonthRanking, function() {
+                                smonth.enable();
+                                smonth.refresh();
+                                smonth.isLoadData = false;
+                            });
+                        }
+                    }
+                    if (this.y > 10) {
+                        resetManScroller();
+                    }
+                    if (this.y < -200) {
+                        showToTop(smonth);
+                    } else {
+                        hideToTop();
+                    }
+                });
+                quarter.on('scroll', function() {
+                    if ((Math.abs(this.y) - Math.abs(quarter.maxScrollY)) > 5) {
+                        if (this.isLoadData == false) {
+                            this.isLoadData = true;
+                            quarter.disable();
+                            loadRanks("quarterRank", ServicesConifg.Ranking.QuarterRanking, function() {
+                                quarter.enable();
+                                quarter.refresh();
+                                quarter.isLoadData = false;
+                            });
+                        }
+                    }
+                    if (this.y > 10) {
+                        resetManScroller();
+                    }
+                    if (this.y < -200) {
+                        showToTop(quarter);
+                    } else {
+                        hideToTop();
+                    }
+                });
+
+                sall.disable();
+                sday.disable();
+                sweek.disable();
+                smonth.disable();
+                quarter.disable();
+                jroller.pulldown({
+                    refresh: function(complete) {
+                        loadAdver();
+                        loadNiuRen();
+                        tabsSwiper.slideTo(0);
+                        dayRankIsLoad = false;
+                        weekRankIsLoad = false;
+                        monthRankIsLoad = false;
+                        quarterRankIsLoad = false;
+                        $("#dayRank").html("").attr("pageIndex", 1).removeAttr("nodata");
+                        $("#weekRank").html("").attr("pageIndex", 1).removeAttr("nodata");
+                        $("#monthRank").html("").attr("pageIndex", 1).removeAttr("nodata");
+                        $("#quarterRank").html("").attr("pageIndex", 1).removeAttr("nodata");
+                        $("#allRank").html("").attr("pageIndex", 1).removeAttr("nodata");
+                        initJroller();
+                        loadRanks("allRank", ServicesConifg.Ranking.GainRanking, function() {
+                            complete();
+                        });
+                    }
+                });
+                jroller.on("scroll", function() {
+                    if (Math.abs(this.y) == Math.abs(this.maxScrollY) && this.isLoadData == false) {
+                        jroller.disable();
+                        sall.enable();
+                        sday.enable();
+                        sweek.enable();
+                        smonth.enable();
+                        quarter.enable();
+                    }
+                });
+                jroller.refresh();
+            }, 500);
+        }
+
+        var resetManScroller = function() {
+            jroller.isLoadData = false;
+            jroller.scrollTo(0, 0, 500);
+            jroller.enable();
+            sall.disable();
+            sall.scrollTo(0, 0, 500);
+            sday.disable();
+            sday.scrollTo(0, 0, 500);
+            sweek.disable();
+            sweek.scrollTo(0, 0, 500);
+            smonth.disable();
+            smonth.scrollTo(0, 0, 500);
+            quarter.disable();
+            quarter.scrollTo(0, 0, 500);
+        };
+
+
+        var uiInit = function() {
+            tabsSwiper = new Swiper('#tabs-container', {
+                speed: 500,
+                longSwipes: 0.4,
+                onSlideChangeStart: function(swiper) {
+
+                },
+                onSlideChangeEnd: function(swiper) {
+                    $(".rank-tabs .active").removeClass('active');
+                    if (swiper.activeIndex == 1) {
+                        if (!dayRankIsLoad) {
+                            loadRanks("dayRank", ServicesConifg.Ranking.DayRanking, function() {
+                                dayRankIsLoad = true;
+                            });
+                        }
+                    } else if (swiper.activeIndex == 2) {
+                        if (!weekRankIsLoad) {
+                            loadRanks("weekRank", ServicesConifg.Ranking.WeekRanking, function() {
+                                weekRankIsLoad = true;
+                            });
+                        }
+                    } else if (swiper.activeIndex == 3) {
+                        if (!monthRankIsLoad) {
+                            loadRanks("monthRank", ServicesConifg.Ranking.MonthRanking, function() {
+                                monthRankIsLoad = true;
+                            });
+                        }
+                    } else if (swiper.activeIndex == 4) {
+                        if (!quarterRankIsLoad) {
+                            loadRanks("quarterRank", ServicesConifg.Ranking.QuarterRanking, function() {
+                                quarterRankIsLoad = true;
+                            });
+                        }
+                    }
+                    $(".rank-tabs li").each(function(i, e) {
+                        if (i == swiper.activeIndex) {
+                            $(e).addClass("active");
+                        }
+                    });
+                }
+            });
+            $(".rank-tabs li").on('touchstart', function(e) {
+                e.preventDefault()
+                    //$(".rank-tabs .active").removeClass('active')
+                    //$(this).addClass('active')
+                tabsSwiper.slideTo($(this).index())
+            });
+        };
+        var loadAdver = function() {
+            sendGet(ServicesConifg.Account.QueryAdvertising,
+                function(succ) {
+                    var template = "<div class=\"swiper-slide\" onclick=\"adClick('{Title}','{JumpUrl}')\"><img src=\"{imageUrl}\" onerror=\"this.src='../images/rank.jpg'\"/></div>";
+                    var result = "";
+                    for (var i in succ) {
+                        if (succ[i].Type == 1) {
+                            result += template
+                                .replace("{imageUrl}", succ[i].ImgUrl)
+                                .replace("{JumpUrl}", succ[i].JumpUrl)
+                                .replace("{Title}", succ[i].Title);
+                        }
+                    }
+                    $api.dom("#mainAd").innerHTML = result;
+                    var swiper = new Swiper('#had', {
+                        pagination: '#swiper-pagination2',
+                        paginationClickable: true,
+                        loop: true
+                    });
+                },
+                function(err) {
+
+                }
+            );
+        };
+
+        function adClick(title, url) {
+            api.openWin({
+                name: 'webpage',
+                url: 'webpage.html',
+                pageParam: {
+                    title: title,
+                    url: url
+                }
+            });
+        }
+        var loadNiuRen = function(end) {
+            sendGet(ServicesConifg.Ranking.RecommendRanking, function(succ) {
+                $("#niuBox").html(template("template1", {
+                    list: succ
+                }));
+                var mySwiper1 = new Swiper('#swiper-container1', {
+                    freeMode: true,
+                    slidesPerView: 'auto',
+                });
+                if (end) {
+                    end();
+                }
+            }, function(err) {
+                if (end) {
+                    end();
+                }
+            });
+        };
+
+        //加载排名信息
+        var loadRanks = function(id, url, end) {
+            showLoading();
+            var pageIndex = $("#" + id).attr("pageIndex");
+            var nodata = $("#" + id).attr("nodata");
+            if (!nodata) {
+                if (!pageIndex) {
+                    pageIndex = 1;
+                }
+                sendPost(url, {
+                    pageIndex: pageIndex,
+                    pageSize: pageSize
+                }, function(succ) {
+                    succ.CurrentPage = pageIndex;
+                    var data = template("template", succ);
+                    $("#" + id).append(data);
+                    //var scroll = new Scrolls(id, {});
+                    if (succ.isLastPage == false) {
+                        $("#" + id).attr("pageIndex", parseInt(pageIndex) + 1);
+                    } else {
+                        $("#" + id).attr("nodata", "nodata");
+                        $("#" + id).append('<div class="jroll-infinite-tip">已加载全部内容</div>');
+                    }
+                    if (end) {
+                        end();
+                    }
+                    closeLoading();
+                }, function(err) {
+                    if (end) {
+                        end();
+                    }
+                    closeLoading();
+                });
+            } else {
+                if (end) {
+                    end();
+                }
+            }
+        };
+
+        function AddSubscribe(user_id) {
+            showLoading("订阅中...");
+            sendPost(ServicesConifg.Subscribe.AddSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $("#btn_" + user_id).html("取消订阅");
+                $("#btn_" + user_id).attr("onclick", "CancelSubscribe(" + user_id + ")");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+
+        function CancelSubscribe(user_id) {
+            showLoading("取消订阅中...");
+            sendPost(ServicesConifg.Subscribe.CancelSubscribe, {
+                subUserId: user_id
+            }, function(succ) {
+                $("#btn_" + user_id).html("订阅");
+                $("#btn_" + user_id).attr("onclick", "AddSubscribe(" + user_id + ")");
+                closeLoading();
+            }, function(err) {
+                showToast(err);
+                closeLoading();
+            });
+        }
+
+        function goDetial(uid) {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'userRecord',
+                    url: 'userRecord.html',
+                    pageParam: {
+                        userId: uid
+                    }
+                });
+            });
+        }
+        var goTabHome = function() {
+            api.sendEvent({
+                name: 'goHome'
+            });
+            api.closeWin();
+        }
+        var goTabStrategy = function() {
+            api.sendEvent({
+                name: 'goStrategy'
+            });
+            api.closeWin();
+        }
+        var goTabSelfstock = function() {
+            api.sendEvent({
+                name: 'GetSelfStock'
+            });
+            api.sendEvent({
+                name: 'goSelfstock'
+            });
+            api.closeWin();
+        }
+        var goTabselectstock = function() {
+            api.sendEvent({
+                name: 'goSelectStock'
+            });
+            api.closeWin();
+        }
+        var goTabMine = function() {
+            api.sendEvent({
+                name: 'goMine'
+            });
+            api.closeWin();
+        }
+    </script>
+    <style type="text/css">
+        .navbar-wrapper {
+            position: relative;
+        }
+
+        #wrapper {
+            position: absolute;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="template">
+        {{each list as value i}}
+        <li>
+            <a onclick="goDetial({{value.user_id}})">
+                <span class="rank-mub">{{(CurrentPage - 1) * 15 + i + 1}}</span>
+                <img src="{{value.portrait}}" onerror="this.src = '../images/general-tx.png'" />
+                <span class="rank-tit">{{SubStr(value.nickname)}}</span>
+                <span class="rank-sy">收益率：
+                    {{if value.gain > 0}}
+                        <span class="red">{{value.gain.toFixed(2)}}%</span> {{else if value.gain
+                < 0}} <span class="green">{{value.gain.toFixed(2)}}%</span>
+                    {{else}}
+                    <span>{{value.gain.toFixed(2)}}%</span> {{/if}}
+                    </span>
+                    <i class="iconfont icon-icon"></i>
+            </a>
+        </li>
+        {{/each}}
+    </script>
+    <script type="text/template" charset="utf-8" id="template1">
+        {{each list as value i}}
+        <div class="swiper-slide m-user">
+            <a href="#" onclick="goDetial({{value.user_id}})">
+                <img src="{{value.portrait}}" onerror="this.src='../images/general-tx.png'" />
+                <p class="name">{{SubStr(value.nickname)}}</p>
+                <p style="text-align:center">
+                    <span>总收益率:</span>
+                    <i class="{{if value.allgain > 0}}red{{else if value.allgain < 0 }}green{{/if}}">{{value.allgain.toFixed(2)}}%</i>
+                </p>
+                <p style="text-align:center">
+                    <span>月收益率:</span>
+                    <i class="{{if value.monthgain > 0}}red{{else if value.monthgain < 0 }}green{{/if}}">{{value.monthgain.toFixed(2)}}%</i>
+                </p>
+            </a>
+            {{if value.isSubscripe}}
+            <p><button id="btn_{{value.user_id}}" onclick="CancelSubscribe({{value.user_id}})" class="wcp-btn wcp-btn-pad01 wcp-btn-empty">取消订阅</button></p>
+            {{else}}
+            <p><button id="btn_{{value.user_id}}" onclick="AddSubscribe({{value.user_id}})" class="wcp-btn wcp-btn-pad01 wcp-btn-empty">订阅</button></p>
+            {{/if}}
+        </div>
+        {{/each}}
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            牛人排行
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container" id="wrapper">
+        <div id="scroller">
+            <div class="rank-box">
+
+                <div id="nBox">
+                    <!-- ban -->
+                    <div class="swiper-container" id="had">
+                        <div class="swiper-wrapper rank-img" id="mainAd">
+                        </div>
+                        <!-- Add Pagination -->
+                        <div id="swiper-pagination2" class="swiper-pagination"></div>
+                    </div>
+                    <!-- 高手 -->
+                    <div id="swiper-container1" class="swiper-container1 wcp-second-box">
+                        <h3 class="list-tit">牛人推荐</h3>
+                        <div class="swiper-wrapper" id="niuBox">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 收益排行 -->
+            <div class="navbar-wrapper" id="wrapper-tabs">
+                <div class="rank-tabs">
+                    <ul>
+                        <li class="active"><a href="#">总收益</a></li>
+                        <li><a href="#">日收益</a></li>
+                        <li><a href="#">周收益</a></li>
+                        <li><a href="#">月收益</a></li>
+                        <li><a href="#">季收益</a></li>
+                    </ul>
+                </div>
+            </div>
+            <!-- rank-box -->
+            <div id="tabs-container" class="swiper-container">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <div class="rank-cbox" id="sall">
+                            <ul class="rank-con" id="allRank">
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="rank-cbox" id="sday">
+                            <ul class="rank-con" id="dayRank">
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="rank-cbox" id="sweek">
+                            <ul class="rank-con" id="weekRank">
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="rank-cbox" id="smonth">
+                            <ul class="rank-con" id="monthRank">
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="rank-cbox" id="quarter">
+                            <ul class="rank-con" id="quarterRank">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="footer" id="footer">
+        <ul>
+            <li id="tab-home"><a href="#" onclick="goTabHome();"><i class="iconfont icon-shouye-shouye"></i><span>首页</span></a></li>
+            <li id="tab-strategy"><a href="#" onclick="goTabStrategy();"><i class="iconfont icon-celve101"></i><span>策略</span></a></li>
+            <li id="tab-selectstock"><a href="#" onclick="goTabselectstock();"><i class="iconfont icon-xuangu"></i><span>选股</span></a></li>
+            <li id="tab-selfstock"><a href="#" onclick="goTabSelfstock();"><i class="iconfont icon-xuanze"></i><span>自选</span></a></li>
+            <li id="tab-mine"><a href="#" onclick="goTabMine();"><i class="iconfont icon-me"></i><span>个人中心</span></a></li>
+        </ul>
+    </div>
+</body>
+
+</html>

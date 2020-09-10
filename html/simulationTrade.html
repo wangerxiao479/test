@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>创建模拟策略</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+    <link href="../css/layer.css" type="text/css" rel="stylesheet" />
+    <link href="../css/my.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet" />
+    <link href="../css/wan-spinner.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/layer.js"></script>
+    <script type="text/javascript" src="../script/highstock.js"></script>
+    <script type="text/javascript" src="../script/broken-axis.js"></script>
+    <script type="text/javascript" src="../script/wan-spinner.js"></script>
+    <script type="text/javascript" src="../script/stick.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../script/enum.js"></script>
+    <script type="text/javascript" src="../script/chartExt.js"></script>
+
+</head>
+<style type="text/css">
+    .pro-symbol.active {
+        background-color: #fff;
+    }
+
+    .stalls table tr td {
+        font-size: 14px;
+        line-height: 24px;
+        word-break: keep-all;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .stalls table tr.green td {
+        color: green;
+    }
+
+    .stalls table tr.red td {
+        color: red;
+    }
+
+    .layui-m-layercont {
+        padding: 20px !important;
+        text-align: left;
+    }
+</style>
+
+<script type="text/javascript">
+    var sysConfig;
+    var priceData;
+    var isPress = false;
+    var PressId = "";
+    var PressStates = "";
+    var isLoadLimit = false;
+    var timeOutEvent = 0;
+    var isInitChart = false;
+    var cacheData = {};
+    var isInitKChart = false;
+    var isKlineRiskStock = false;
+    var SubscribePact;
+    var RiskPact;
+    var hasReadXy = false;
+
+    $(function() {
+        var tabsSwiper = new Swiper('.swiper-container', {
+            speed: 500,
+            allowSwipeToNext: false,
+            allowSwipeToPrev: false,
+            onSlideChangeStart: function() {
+                $("#wrapper-tabs li.active").removeClass('active')
+                $("#wrapper-tabs li").eq(tabsSwiper.activeIndex).addClass('active')
+            },
+            onSlideChangeEnd: function() {
+                if (tabsSwiper.activeIndex == 1) {
+
+                }
+            }
+        })
+        $(".gp-onoff").click(function() {
+            $(".gp-market").toggle();
+            $(this).toggleClass("icon-rotate-copy");
+        });
+        /* 推荐选择*/
+        $(".trade-money li").click(function() {
+            $(this).addClass("on").siblings().removeClass("on");
+            var value = $(this).html();
+            $api.dom("#i-xyj").value = value;
+            DoCounter();
+        });
+        $("#wrapper-tabs li").click(function() {
+            $("#wrapper-tabs li.active").removeClass('active');
+            $(this).addClass('active');
+            tabsSwiper.unlockSwipeToNext();
+            tabsSwiper.unlockSwipeToPrev();
+            tabsSwiper.slideTo($(this).index());
+            tabsSwiper.lockSwipeToNext();
+            tabsSwiper.lockSwipeToPrev();
+        });
+
+        $(".gp-tabs li").on('touchstart mousedown', function(e) {
+            e.preventDefault()
+            $(".gp-tabs .active").removeClass('active')
+            $(this).addClass('active')
+
+            var t1money = [500, 1000, 2000, 3000, 5000, 8000, 10000, 20000];
+            var tnmoney = [1000, 3000, 5000, 8000, 10000, 20000, 30000, 50000];
+            var xyj = $("#i-xyj").val();
+            $(".trade-money").html("");
+            var tradeMode = $("#tradeMode .active").attr("value");
+            if (tradeMode == "t1") {
+                $(t1money).each(function(i, e) {
+                    if (xyj == e) {
+                        $(".trade-money").append("<li class='on'>" + e + "</li>");
+                    } else {
+                        $(".trade-money").append("<li>" + e + "</li>");
+                    }
+                });
+                $("#T1Data").show();
+                $("#TNData").hide();
+            } else {
+                $(tnmoney).each(function(i, e) {
+                    if (xyj == e) {
+                        $(".trade-money").append("<li class='on'>" + e + "</li>");
+                    } else {
+                        $(".trade-money").append("<li>" + e + "</li>");
+                    }
+                });
+                $("#T1Data").hide();
+                $("#TNData").show();
+            }
+            /* 推荐选择*/
+            $(".trade-money li").click(function() {
+                $(this).addClass("on").siblings().removeClass("on");
+                var value = $(this).html();
+                $api.dom("#i-xyj").value = value;
+                DoCounter();
+            });
+        })
+        $(".gp-tabs li").click(function(e) {
+            e.preventDefault()
+        });
+
+        // 相关协议
+        $("#xybtn").on("click", function() {
+            //协议
+            var xyj = $("#i-xyj").val();
+            var num = parseInt($("#stockNum").html());
+            var tempPact = [];
+            var userInfo = getUserInfo();
+            $.each(SubscribePact, function(i, e) {
+                tempPact[i] = {
+                    title: SubscribePact[i].title,
+                    content: SubscribePact[i].content.replace(/{信用金}/g, xyj)
+                        .replace(/{信用金大写}/g, DX(xyj))
+                        .replace(/{总市值}/g, priceData.CurrentMatch * num)
+                        .replace(/{总市值大写}/g, DX(priceData.CurrentMatch * num))
+                        .replace(/{乙方姓名}/g, userInfo.RealName)
+                        .replace(/{乙方身份证}/g, userInfo.UserCer)
+                        .replace(/{乙方联系电话}/g, userInfo.Phone)
+                        .replace(/{乙方联系地址}/g, "____")
+                        .replace(/{甲方姓名}/g, "____")
+                        .replace(/{甲方身份证}/g, "____")
+                }
+            });
+            $("#xytitle").html(tempPact[0].title);
+            $("#xycontent").html(tempPact[0].content);
+            $("#xybox").show();
+        })
+        $("#fxbtn").on("click", function() {
+            //风险提示书
+            var xyj = $("#i-xyj").val();
+            var num = parseInt($("#stockNum").html());
+            var tempPact = [];
+            var userInfo = getUserInfo();
+            tempPact = {
+                title: RiskPact.title,
+                content: RiskPact.content.replace(/{信用金}/g, xyj)
+                    .replace(/{信用金大写}/g, DX(xyj))
+                    .replace(/{总市值}/g, priceData.CurrentMatch * num)
+                    .replace(/{总市值大写}/g, DX(priceData.CurrentMatch * num))
+                    .replace(/{乙方姓名}/g, userInfo.RealName)
+                    .replace(/{乙方身份证}/g, userInfo.UserCer)
+                    .replace(/{乙方联系电话}/g, userInfo.Phone)
+                    .replace(/{乙方联系地址}/g, "____")
+                    .replace(/{甲方姓名}/g, "____")
+                    .replace(/{甲方身份证}/g, "____")
+            }
+            $("#fxtitle").html(tempPact.title);
+            $("#fxcontent").html(tempPact.content);
+            $("#fxbox").show();
+        });
+        $(".agree-xy-close,.agree-xy-btn").on("click", function() {
+            $(".imgbox").hide();
+            if ($(this).hasClass("agree-xy-btn")) {
+                var el = document.getElementById('readxy');
+                el.checked = true;
+                hasReadXy = true;
+                var dontshow = document.getElementById('dontshow');
+                if (dontshow.checked) {
+                    api.setPrefs({
+                        key: 'hasReadXy',
+                        value: 'true'
+                    });
+                } else {
+                    api.setPrefs({
+                        key: 'hasReadXy',
+                        value: 'false'
+                    });
+                }
+            }
+        })
+    });
+
+    function DX(n) {
+        if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(n))
+            return "数据非法";
+        var unit = "千百拾亿千百拾万千百拾元角分",
+            str = "";
+        n += "00";
+        var p = n.indexOf('.');
+        if (p >= 0)
+            n = n.substring(0, p) + n.substr(p + 1, 2);
+        unit = unit.substr(unit.length - n.length);
+        for (var i = 0; i < n.length; i++)
+            str += '零壹贰叁肆伍陆柒捌玖'.charAt(n.charAt(i)) + unit.charAt(i);
+        return str.replace(/零(千|百|拾|角)/g, "零").replace(/(零)+/g, "零").replace(/零(万|亿|元)/g, "$1").replace(/(亿)万|壹(拾)/g, "$1$2").replace(/^元零?|零分/g, "").replace(/元$/g, "元整");
+    }
+
+    var stockCode = "";
+    _apiready = function() {
+        api.getPrefs({
+            key: 'hasReadXy'
+        }, function(ret, err) {
+            if (ret.value == "true") {
+                var el = document.getElementById('readxy');
+                var dontshow = document.getElementById('dontshow')
+                dontshow.checked = true;
+                el.checked = true;
+                hasReadXy = true;
+            }
+        });
+
+        stockCode = api.pageParam.stockCode;
+        template.helper("fixd", function(dec) {
+            if (typeof(dec) == "string"); {
+                dec = parseFloat(dec);
+            }
+            return dec.toFixed(2);
+        });
+        getPact();
+        getRiskPact();
+        QueryConfig(function() {
+            showLoading();
+            QueryStockInfo();
+            var userInfo = getUserInfo();
+            $api.dom("#balance").innerHTML = userInfo.VirtualMoney;
+            StockPool();
+            if (isInitKChart == false) {
+                initKChart();
+                isInitKChart = true;
+            }
+        });
+    };
+
+    function priceChange(dom) {};
+
+    function QueryConfig(end) {
+        sendGet(ServicesConifg.SysConfig.QuerySysConfig,
+            function(succ) {
+                sysConfig = succ[0];
+                $api.dom("#i-ul-per").innerHTML = (sysConfig.GainScale * 100).toString() + "%";
+                end();
+            },
+            function(err) {
+                showToast("加载服务器配置失败");
+                api.closeWin();
+            }
+        );
+    };
+
+    function QueryStockInfo() {
+        var param = {
+            "stockcode": stockCode
+        };
+        sendPost(ServicesConifg.Quotation.QueryMarket, param,
+            function(data) {
+                if (data.CurrentMatch == "0.00") {
+                    data.CurrentMatch = data.PreClose;
+                }
+                data.UpLimit = data.PreClose * 1.1;
+                data.DownLimit = data.PreClose * 0.9;
+                data.Differential = data.CurrentMatch - data.PreClose;
+                data.DifferentialPersent = ((data.Differential / data.PreClose) * 100).toFixed(2);
+                if (data.Differential > 0) {
+                    $("#_newPrice").addClass("red").removeClass("green");
+                    $("#_newDiff").addClass("red").removeClass("green");
+                } else if (data.Differential < 0) {
+                    $("#_newPrice").addClass("green").removeClass("red");
+                    $("#_newDiff").addClass("green").removeClass("red");
+                } else {
+                    $("#_newPrice").removeClass("green").removeClass("red");
+                    $("#_newDiff").removeClass("green").removeClass("red");
+                }
+                $("#_newPrice").html(data.CurrentMatch);
+                $("#_newDiff").html(data.DifferentialPersent + "%");
+                if (data.Differential > 0) {
+                    data.Color = "red";
+                } else if (data.Differential < 0) {
+                    data.Color = "green";
+                } else {
+                    data.Color = "black";
+                }
+                //最小信用金
+                data.miniXYJ = Math.ceil(data.CurrentMatch / (sysConfig.Money_scale == 0 ? 1 : sysConfig.Money_scale)) * 100;
+
+                priceData = data;
+                $api.dom("#stockInfo").innerHTML = template("templateStock", data);
+                if (isLoadLimit == false) {
+                    var maxWin = (1 + sysConfig.GainScale) * priceData.CurrentMatch;
+                    $api.dom("#i-uplimit").value = maxWin.toFixed(2);
+                    isLoadLimit = true
+                }
+
+                var Handicap = new Array();
+                for (var i in data.SellHandicap) {
+                    var cls = "black";
+                    if (data.SellHandicap[i].Price > data.PreClose) {
+                        cls = "red";
+                    } else if (data.SellHandicap[i].Price < data.PreClose) {
+                        cls = "green";
+                    }
+                    Handicap.unshift({
+                        Index: "卖" + data.SellHandicap[i].Index,
+                        Price: data.SellHandicap[i].Price.toFixed(2),
+                        Volume: convertWan(data.SellHandicap[i].Volume),
+                        cls: cls
+                    });
+                }
+
+                for (var i in data.BuyHandicap) {
+                    var cls = "black";
+                    if (data.BuyHandicap[i].Price > data.PreClose) {
+                        cls = "red";
+                    } else if (data.BuyHandicap[i].Price < data.PreClose) {
+                        cls = "green";
+                    }
+                    Handicap.push({
+                        Index: "买" + data.BuyHandicap[i].Index,
+                        Price: data.BuyHandicap[i].Price.toFixed(2),
+                        Volume: convertWan(data.BuyHandicap[i].Volume),
+                        cls: cls
+                    });
+                }
+
+                $api.dom("#stalls").innerHTML = template("templateStalls", {
+                    List: Handicap
+                });
+
+                DoCounter();
+                if (!isInitPriceBox) {
+                    initPriceBox();
+                    isInitPriceBox = true;
+                }
+                closeLoading();
+                if (isInitChart == false) {
+                    initChart();
+                    isInitChart = true;
+
+                    $("#addselfstockbtn").click(function() {
+                        AddSelfStock(data.StockCode, data.StockName);
+                    });
+                }
+            },
+            function(err) {
+                showToast("行情服务器异常");
+                closeLoading();
+            }, false, true
+        );
+        setTimeout(QueryStockInfo, 10000); //自动更新行情
+    };
+    //添加自选股
+    var AddSelfStock = function(_code, _name) {
+        event.stopPropagation();
+        sendPost(ServicesConifg.SelfStocking.AddSelfStock, {
+            stockcode: _code,
+            stockname: _name
+        }, function(data) {
+            showToast("添加自选股成功");
+            api.sendEvent({
+                name: 'GetSelfStock'
+            });
+        }, function(err) {
+            showToast(err);
+        })
+    }
+
+    var _stopWinBox, _stopLossBox;
+    var bangPrice;
+
+    function initPriceBox() {
+        var maxWin = (1 + sysConfig.GainScale) * priceData.CurrentMatch;
+        var stockVolume = parseInt($("#stockNum").html());
+        if (isNaN(stockVolume)) {
+            DoCounter();
+            initPriceBox();
+            retuen;
+        }
+        var resultMaxValue = maxWin;
+        if (cacheData.StopWinPrice && cacheData.StopWinPrice < 9999) //如果手动设置了止损价格或者止损价大于强平价格
+        {
+            resultMaxValue = parseFloat(cacheData.StopWinPrice);
+        }
+        if (!$("#i-uplimit").is(":focus")) {
+            $api.dom("#i-uplimit").value = resultMaxValue.toFixed(2);
+            $api.dom("#i-earn").innerHTML = ((parseFloat(resultMaxValue) - parseFloat(priceData.CurrentMatch)) * stockVolume).toFixed(2); //最大可以赚到金额
+        }
+        if (_stopWinBox) {
+            _stopWinBox.setExtremes(9999, priceData.CurrentMatch); //不限制最高止盈价
+        } else {
+            _stopWinBox = $("#stopWinBox").WanSpinner({
+                maxValue: 9999, //不限制最高止盈
+                minValue: priceData.CurrentMatch,
+                step: 0.01,
+                inputWidth: 100,
+                exceptionFun: function(EXCEPTION) {
+                    if (EXCEPTION == 1) {
+                        showToast("超过最大止盈价(￥" + 9999 + ")");
+                    } else if (EXCEPTION == -1) {
+                        showToast("超过最小止盈价(￥" + priceData.CurrentMatch + ")");
+                    }
+                },
+                valueChanged: function(el, val) {
+                    cacheData.StopWinPrice = val;
+                    stockVolume = parseInt($("#stockNum").html());
+                    $api.dom("#i-earn").innerHTML = ((parseFloat(val) - parseFloat(priceData.CurrentMatch)) * stockVolume).toFixed(2); //最大可以赚到金额
+                    $api.dom("#i-ul-per").innerHTML = ((parseFloat(val) - parseFloat(priceData.CurrentMatch)) / parseFloat(priceData.CurrentMatch) * 100).toFixed(2) + "%";
+                }
+            });
+        }
+        //priceData,sysConfig 计算最大止盈价格
+        var orgMoney = $("#i-xyj").val(); //原始资金
+        bangPrice = ((priceData.CurrentMatch * stockVolume) - (orgMoney * sysConfig.LossScale)) / stockVolume; //强平价格
+        if (bangPrice < 0)
+            bangPrice = 0;
+        var resultMinValue = ((priceData.CurrentMatch * stockVolume) - (orgMoney * sysConfig.LossScale)) / stockVolume;
+        if (cacheData.StopLossPrice && cacheData.StopLossPrice > bangPrice) //如果手动设置了止损价格或者止损价大于强平价格
+        {
+            resultMinValue = parseFloat(cacheData.StopLossPrice);
+        }
+        if (!$("#i-downlimit").is(":focus")) {
+            $api.dom("#i-downlimit").value = resultMinValue.toFixed(2);
+            $api.dom("#i-dn-per").innerHTML = ((priceData.CurrentMatch - resultMinValue) / priceData.CurrentMatch * 100).toFixed(2) + "%";
+        }
+        if (_stopLossBox) {
+            _stopLossBox.setExtremes(priceData.CurrentMatch, bangPrice);
+        } else {
+            _stopLossBox = $("#stopLossBox").WanSpinner({
+                maxValue: priceData.CurrentMatch,
+                minValue: bangPrice,
+                step: 0.01,
+                inputWidth: 100,
+                exceptionFun: function(EXCEPTION) {
+                    if (EXCEPTION == 1) {
+                        showToast("超过最大止损价(￥" + priceData.CurrentMatch + ")");
+                    } else if (EXCEPTION == -1) {
+                        showToast("超过最低止损价(￥" + bangPrice.toFixed(2) + ")");
+                    }
+                },
+                valueChanged: function(el, val) {
+                    cacheData.StopLossPrice = val;
+                    $api.dom("#i-dn-per").innerHTML = ((priceData.CurrentMatch - val) / priceData.CurrentMatch * 100).toFixed(2) + "%";
+                }
+            });
+        }
+    };
+
+    function convertWan(volume) {
+        if (volume > 10000) {
+            return (volume / 10000).toFixed(2) + "万";
+        } else {
+            return volume;
+        }
+    };
+    var deductible = 0;
+    var isInitPriceBox = false;
+    /*信用金计算*/
+    var fristDoCounter = true;
+
+    function DoCounter() {
+        if (!$("#i-xyj").is(":focus") || fristDoCounter) {
+            var data = $api.dom("#i-xyj").value;
+            data = parseInt(data);
+            $(".trade-money li").removeClass("on");
+            $.each($(".trade-money li"), function(i, e) {
+                if ($(e).html() == data.toString()) {
+                    $(e).addClass("on");
+                }
+            });
+            if (data < priceData.miniXYJ) {
+                if (!fristDoCounter) {
+                    showToast('最少信用金为' + priceData.miniXYJ + '元')
+                }
+                $("#i-xyj").val(priceData.miniXYJ);
+                data = priceData.miniXYJ;
+            }
+            fristDoCounter = false;
+            if (data > 0 && data % 100 == 0 && data >= priceData.miniXYJ) //100的倍数最大10W
+            {
+                //股票数量 = 金额 * 比例 / 最新价格 向下取百倍整数
+                var maxVolume = parseInt((data * (sysConfig.Money_scale == 0 ? 1 : sysConfig.Money_scale)) / parseFloat(priceData.CurrentMatch) / 100) * 100;
+                var stockVolume = (cacheData.stockVolume && cacheData.stockVolume < maxVolume) ? cacheData.stockVolume : maxVolume;
+                var marketValue = stockVolume * priceData.CurrentMatch;
+                $api.dom("#s-number").innerHTML = template("templatePriceCounter", {
+                    stockVolume: stockVolume,
+                    marketValue: marketValue,
+                    maxStockVolume: maxVolume
+                });
+                if (parseFloat($api.dom("#i-uplimit").value) - parseFloat(priceData.CurrentMatch) > 0)
+                    $api.dom("#i-earn").innerHTML = ((parseFloat($api.dom("#i-uplimit").value) - parseFloat(priceData.CurrentMatch)) * stockVolume).toFixed(2); //最大可以赚到金额
+                $api.dom("#orderMoney").innerHTML = parseInt($api.dom("#i-xyj").value);
+                return true;
+            } else {
+                $api.dom("#i-xyj").value = priceData.miniXYJ;
+                DoCounter();
+                return false;
+            }
+        }
+    }
+    var yMaxPer, yMinPer;
+
+    function initChart() {
+        Highcharts.setOptions({
+            useUTC: true
+        });
+        loadMinute(function(sucData, yMax, yMin, plotValue) {
+            Highcharts.setOptions({
+                global: {
+                    useUTC: false
+                }
+            });
+            $("#hqInfo").highcharts("StockChart", {
+                chart: {
+                    events: {
+                        load: function() {
+                            var series = this.series[0];
+                            var yAxis = this.yAxis[0];
+                            setInterval(function() {
+                                loadMinute(function(_sucData, _yMax, _yMin, _plotValue) {
+                                    series.setData(_sucData);
+                                    yAxis.setExtremes(_yMin, _yMax * 1.005);
+                                });
+                            }, 6000);
+                        }
+                    }
+                },
+                credits: {
+                    enabled: false
+                },
+                exporting: {
+                    enabled: false
+                },
+                series: [{
+                    name: '价格',
+                    data: sucData,
+                    lineWidth: 1,
+                    color: "#89BAE3"
+                }],
+                xAxis: {
+                    ordinal: false,
+                    breaks: [{
+                        from: translateTime("000000001130"),
+                        to: translateTime("000000001300")
+                    }],
+                    min: translateTime("000000000930"),
+                    max: translateTime("000000001500"),
+                    plotLines: [{
+                        value: translateTime("000000001300"),
+                        color: '#D8D8D8',
+                        width: 1,
+                        dashStyle: "ShortDash"
+                    }],
+                },
+                tooltip: {
+                    useHTML: true,
+                    headerFormat: "",
+                    valueDecimals: 2
+                },
+                yAxis: {
+                    ordinal: false,
+                    max: yMax * 1.005,
+                    min: yMin,
+                    startOnTick: false,
+                    endOnTick: false,
+                    gridLineColor: null,
+                    plotLines: [{
+                        value: plotValue,
+                        color: '#D8D8D8',
+                        dashStyle: "ShortDash",
+                        width: 1,
+                        label: {
+                            text: plotValue
+                        }
+                    }, {
+                        value: yMax,
+                        label: {
+                            text: (yMax).toFixed(2),
+                            verticalAlign: "middle"
+                        }
+                    }, {
+                        value: yMin,
+                        label: {
+                            text: (yMin).toFixed(2),
+                            verticalAlign: "top"
+                        }
+                    }],
+                    labels: {
+                        enabled: false
+                    }
+                },
+                rangeSelector: false,
+                scrollbar: false,
+                navigator: false
+            });
+        });
+    }
+
+    function loadMinute(end) {
+        var startTime = new Date().Format("yyyyMMdd092900");
+        var hk = (stockCode.indexOf("6") == 0 ? "sse" : "szse") + stockCode;
+        var url = "http://webstock.quote.hermes.hexun.com/a/minute?code=" + hk + "&start=" + startTime + "&number=1000";
+        api.ajax({
+            url: url,
+            method: 'get',
+            dataType: "text"
+        }, function(ret, err) {
+            if (ret) {
+                var json = $api.strToJson(ret.substring(1, ret.length - 2));
+                var _data = json.Data[0];
+                var data = [];
+                for (var i in _data) {
+                    data.push([
+                        translateTime(_data[i][0]),
+                        _data[i][1] / 100
+                    ]);
+                }
+                var yMax = json.Data[2] / 100;
+                var yMin = json.Data[3] / 100;
+                var plotValue = json.Data[1] / 100;
+                var XP = Math.abs(yMax - plotValue);
+                var NP = Math.abs(yMin - plotValue);
+                var chazhi = XP;
+                if (NP > XP) {
+                    chazhi = NP;
+                }
+                yMax = plotValue + chazhi;
+                yMin = plotValue - chazhi;
+                end(data, yMax, yMin, plotValue);
+            } else {}
+        });
+    }
+
+    function translateTime(tb) {
+        var hr = tb.toString().substring(8, 10); //小时
+        var mi = tb.toString().substring(10, 12); //分钟
+        var date = new Date();
+        date.setHours(parseInt(hr));
+        date.setMinutes(parseInt(mi));
+        date.setSeconds(0);
+        date.setMilliseconds(0);
+        return date.getTime();
+    }
+
+    function translateDate(tb) {
+        var year = tb.toString().substring(0, 4);
+        var month = tb.toString().substring(4, 6);
+        var day = tb.toString().substring(6, 8);
+        var date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return date.getTime();
+    }
+
+    function Voucher() {
+        api.openWin({
+            name: 'voucher',
+            url: 'voucher.html',
+            pageParam: {
+                name: 'test'
+            }
+        });
+
+    };
+
+    function getPact() {
+        sendPost(ServicesConifg.Account.SubscribePact, {}, function(succ) {
+            SubscribePact = succ;
+            $("#xytitle").html(SubscribePact[0].title);
+            $("#xycontent").html(SubscribePact[0].content);
+        }, function(err) {
+            showToast("协议加载失败");
+        }, true, false);
+    };
+
+    function getRiskPact() {
+        sendPost(ServicesConifg.Account.RiskPact, {}, function(succ) {
+            RiskPact = succ;
+            $("#fxtitle").html(RiskPact.title);
+            $("#fxcontent").html(RiskPact.content);
+        }, function(err) {
+            showToast("风险提示书加载失败");
+        }, true, false);
+    };
+
+    function changeStockVolumn() {
+        var nowNumber = $("#stockNum").html();
+        var maxNumber = $("#stockNum").attr("data-max");
+        var boxHtml = template("boxChangeVolumn", {
+            number: nowNumber,
+            maxNumber: maxNumber,
+            marketValue: parseFloat(nowNumber) * parseFloat(priceData.CurrentMatch)
+        });
+        layer.open({
+            title: [
+                '修改股票数量',
+                'background-color: #FF4351; color:#fff;height:40px; line-height:40px;'
+            ],
+            btn: ['提交', '关闭'],
+            content: boxHtml,
+            yes: function(index) {
+                cacheData.stockVolume = cacheData.tempStockVolume;
+                $("#stockNum").html(cacheData.stockVolume);
+                DoCounter();
+                layer.close(index);
+                initPriceBox();
+            }
+        });
+        $(".wan-spinner").WanSpinner({
+            maxValue: maxNumber,
+            minValue: 100,
+            step: 100,
+            inputWidth: 100,
+            exceptionFun: function(EXCEPTION) {
+                if (EXCEPTION == 1) {
+                    showToast("超过最大值");
+                } else if (EXCEPTION == -1) {
+                    showToast("超过最小值");
+                }
+            },
+            valueChanged: function(el, val) {
+                cacheData.tempStockVolume = val;
+                var ckMarketValue = parseFloat(priceData.CurrentMatch) * parseFloat(val);
+                $("#ckMarketValue").html(ckMarketValue);
+            }
+        });
+    };
+
+    function recommend() {
+        var maxNumber = $("#stockNum").attr("data-max");
+        cacheData.stockVolume = undefined;
+        $("#stockNum").html(maxNumber);
+    };
+
+    function subimt() {
+        if (!DoCounter()) //计算信用金
+            return false;
+        if (sysConfig.IsTrade == false) {
+            showToast('非股票池股票禁止交易');
+            return false;
+        }
+        if (isKlineRiskStock) {
+            showToast(sysConfig.AmplitudeDay + '天内涨跌幅大于' + sysConfig.AmplitudeScale + "%的风险股票禁止交易");
+            return;
+        }
+        if (!hasReadXy) {
+            $(".imgbox").show();
+            return false;
+        }
+        var isRead = $("#readxy").is(":checked");
+        if (isRead) {
+            $("#submit").attr('disabled', true);
+            showLoading("提交策略中...");
+            var tradeMode = $("#tradeMode .active").attr("value");
+            tradeMode = tradeMode == "t1" ? TradeMode.T1 : TradeMode.TN;
+
+            var orgMoney = $("#i-xyj").val(); //原始资金
+            var stockNumber = parseInt($("#stockNum").html()); //股票数量
+            if (stockNumber % 100 != 0 || stockNumber < 100) {
+                closeLoading();
+                showToast("股票数量需要大于100且是100的整数倍");
+                $("#submit").attr('disabled', false);
+                return;
+            }
+            if (orgMoney > parseFloat(priceData.CurrentMatch) * stockNumber) {
+                closeLoading();
+                showToast('信用金不能大于当前市值');
+                $("#submit").attr('disabled', false);
+                return;
+            }
+            var upLimit = parseFloat($("#i-uplimit").val()); //止盈
+            if (upLimit <= parseFloat(priceData.CurrentMatch)) {
+                closeLoading();
+                showToast('止盈价不能低于或等于最新价');
+                $("#submit").attr('disabled', false);
+                return;
+            }
+            var downLimit = parseFloat($("#i-downlimit").val()); //止损
+            if (downLimit >= parseFloat(priceData.CurrentMatch)) {
+                closeLoading();
+                showToast('止损价不能大于或等于最新价');
+                $("#submit").attr('disabled', false);
+                return;
+            }
+            if (upLimit <= downLimit) {
+                closeLoading();
+                showToast('止盈价不能低于或等于止损价');
+                $("#submit").attr('disabled', false);
+                return;
+            }
+            var stockCode = priceData.StockCode; //股票代码
+            var stockName = priceData.StockName; //股票名称
+            var upLimit = $("#i-uplimit").val(); //止盈
+            var downLimit = $("#i-downlimit").val(); //止损
+            var creditMoney = parseInt(orgMoney) * (sysConfig.Money_scale == 0 ? 1 : sysConfig.Money_scale);
+            var IsDelay = true;
+
+            var param = {
+                Money: orgMoney,
+                StockCode: stockCode,
+                StockName: stockName,
+                StockNum: stockNumber,
+                GainPrice: upLimit,
+                LossPrice: downLimit,
+                TradeMode: tradeMode,
+                IsDelay: IsDelay,
+                Direction: EntrustDirection.Buy,
+                TradeType: TradeType.MustTrade,
+                StrategyType: StrategyType.SimulationTrade,
+                CreditMoney: creditMoney
+            };
+
+            sendPost(ServicesConifg.Trader.SendEntrust, param,
+                function(succ) {
+                    closeLoading();
+                    showToast("提交成功");
+                    api.sendEvent({
+                        name: 'reloadSimulationStrategy'
+                    });
+                    api.closeWin({
+                        name: 'search'
+                    });
+                    api.closeWin();
+                    $("#submit").attr('disabled', false);
+                },
+                function(err) {
+                    closeLoading();
+                    showToast(err);
+                    $("#submit").attr('disabled', false);
+                }
+            );
+        } else {
+            showToast('请先同意协议条款');
+        }
+
+    }
+
+    function loadDayK(end) {
+        var startTime = new Date().Format("yyyyMMdd092900");
+        var hk = (stockCode.indexOf("6") == 0 ? "sse" : "szse") + stockCode;
+        var url = "http://webstock.quote.hermes.hexun.com/a/kline?code=" + hk + "&start=" + startTime + "&number=-100&type=5";
+        api.ajax({
+            url: url,
+            method: 'get',
+            dataType: "text"
+        }, function(ret, err) {
+            if (ret) {
+                var json = $api.strToJson(ret.substring(1, ret.length - 2));
+                var _data = json.Data[0];
+                var data = [];
+                for (var i in _data) {
+                    data.push([
+                        translateDate(_data[i][0]),
+                        _data[i][1] / 100, //前收盘价
+                        _data[i][2] / 100, //开盘价
+                        _data[i][3] / 100, //收盘价
+                        _data[i][4] / 100, //最高价
+                        _data[i][5] / 100, //最低价
+                        _data[i][6], //成交量
+                        _data[i][7] //成交额
+                    ]);
+                }
+                end(data);
+                krisk(data);
+            } else {}
+        });
+    };
+
+    function initKChart() {
+        loadDayK(function(data) {
+            var vlInfo = "";
+            $.each(data, function(i, value) {
+                var zde = value[3] - value[1]; //涨跌额
+                var zdf = (zde / value[1]) * 100; //涨跌幅
+                var hsl = 0.00;
+                //计算日均线
+                var dayValue = [0.00, 0.00, 0.00, 0.00];
+                var dayList = [5, 10, 20, 30];
+                for (var z in dayList) {
+                    var temValue = 0.00;
+                    var times = 0;
+                    for (var j = (dayList[z] - 1); j >= 0; j--) {
+                        if ((i - j) >= 0) {
+                            temValue += data[i - j][3];
+                            times++;
+                        }
+                    }
+                    dayValue[z] = temValue / times;
+                }
+                var _temp = value[0] + "^" + value[2] + "^" + value[3] + "^" + value[4] + "^" + value[5] + "^" + value[6] + "^" +
+                    value[7] + "^" + zdf + "^" + zde + "^" + hsl + "^" + value[1] + "^" + dayValue[0] + "^" + dayValue[1] + "^" + dayValue[2] + "^" + dayValue[3] + "^null~";
+                vlInfo += _temp;
+            });
+            new highStockChart('kBox', {
+                cname: $("#gp-name").html(),
+                vl: vlInfo
+            }, []);
+        });
+    };
+    var krisk = function(kdata) {
+        //K线风控
+        var fkdata = kdata.slice(0 - sysConfig.AmplitudeDay - 1);
+        var fkzsj = 0;
+        if (fkdata.length == 1)
+            fkzsj = fkdata[0][1]; //昨收价
+        else
+            fkzsj = fkdata[sysConfig.AmplitudeDay - 2][1]; //昨收价
+        var fkzgj = fkzsj; //最高价
+        $.each(fkdata, function(i, value) {
+            if (value[4] > fkzgj) {
+                fkzgj = value[4];
+            }
+        });
+        var fkzdj = fkzsj; //最低价
+        $.each(fkdata, function(i, value) {
+            if (value[5] < fkzdj) {
+                fkzdj = value[5];
+            }
+        });
+        if ((fkzgj - fkzsj) / fkzsj * 100 > sysConfig.AmplitudeScale) {
+            isKlineRiskStock = true;
+        }
+        if ((fkzsj - fkzdj) / fkzsj * 100 > sysConfig.AmplitudeScale) {
+            isKlineRiskStock = true;
+        }
+    };
+    //获取股票池
+    var StockPool = function() {
+        sendGet(ServicesConifg.SysConfig.QueryRiskStockVersion, function(data) {
+            var version = data;
+            var pool = getStockPool(version);
+            if (pool != null && pool.length > 0) {
+                setPoolData(pool);
+            } else {
+                sendGet(ServicesConifg.SysConfig.QueryRiskStockPool, function(res) {
+                    saveStockPool(res, version);
+                    setPoolData(res);
+                }, function(err) {
+                    showToast('获取股票池失败');
+                });
+            }
+        }, function(err) {
+            showToast('获取股票池版本失败');
+        }, false);
+    }
+    var setPoolData = function(pool) {
+        var pools = new Array();
+        $.each(pool, function(i, e) {
+            var stock;
+            $.each(e.StockList, function(si, se) {
+                if (se.StockCode == stockCode) {
+                    stock = se;
+                }
+            });
+            if (stock) {
+                pools.push(e);
+            }
+        });
+        if (pools.length > 0) {
+            var IsTrade;
+            $.each(pools, function(ei, ee) {
+                if (ee.IsTrade == false) {
+                    IsTrade = ee;
+                }
+            });
+            if (IsTrade == undefined) {
+                pools.sort(function(a, b) {
+                    return a.Sort - b.Sort
+                });
+                sysConfig.IsTrade = true;
+                sysConfig.Money_scale = pools[0].Scale;
+            } else {
+                //禁止交易
+                sysConfig.IsTrade = false;
+                sysConfig.Money_scale = IsTrade.Scale == 0 ? 1 : IsTrade.Scale;
+            }
+        } else {
+            //禁止交易
+            sysConfig.IsTrade = false;
+        }
+    }
+    var saveStockPool = function(value, version) {
+        api.setPrefs({
+            key: 'version',
+            value: version
+        });
+        api.setPrefs({
+            key: 'StockPool',
+            value: JSON.stringify(value)
+        });
+    }
+
+    var getStockPool = function(version) {
+        var _v = parseInt(api.getPrefs({
+            sync: true,
+            key: 'version'
+        }));
+        if (version == _v) {
+            return JSON.parse(api.getPrefs({
+                sync: true,
+                key: 'StockPool'
+            }));
+        } else {
+            return null;
+        }
+    }
+</script>
+
+<body>
+    <script type="text/template" charset="utf-8" id="boxChangeVolumn">
+        <div class="trade-profit">
+            <div class="box-crossr">
+                <label>股票数量:</label>
+                <div class="wan-spinner wan-spinner-2">
+                    <a href="javascript:void(0)" class="minus">-</a>
+                    <input type="text" value="{{number}}" />
+                    <a href="javascript:void(0)" class="plus">+</a>
+                </div>
+            </div>
+            <p><span style="color:gray; font-size:11px;">最大可买数量为{{maxNumber}},数量必须为100的整数倍 1手 = 100股</span></p>
+            <p><span style="color:gray; font-size:11px;">参考市值(<span id="ckMarketValue">{{fixd(marketValue)}}</span>)</span>
+            </p>
+        </div>
+    </script>
+    <script type="text/template" charset="utf-8" id="templateStock">
+        <div class="gp-tit">
+            <div class="gp-name">{{StockName}}<span class="gp-num">{{StockCode}}</span></div>
+            <div class="gp-jg {{Color}}">{{fixd(CurrentMatch)}}<span class="{{Color}}">{{fixd(Differential)}} &nbsp;&nbsp;&nbsp; {{fixd(DifferentialPersent)}}%</span></div>
+            <!-- <div class="gp-onoff"><i class="iconfont icon-arrow-copy"></i></div> -->
+        </div>
+        <div class="gp-market">
+            <ul class="market-xq">
+                <li class="w1">今开<span style="color:{{if TodayOpen > PreClose}}red{{else if PreClose > TodayOpen}}green{{else}}black{{/if}}">{{fixd(TodayOpen)}}</span></li>
+                <li class="w1">最高<span style="color:{{if HighestPrice > PreClose}}red{{else if PreClose > HighestPrice}}green{{else}}black{{/if}}">{{fixd(HighestPrice)}}</span></li>
+                <li class="w2">成交量<span style="color:black">{{DealVolume}}手</span></li>
+                <li class="w3" style="color:red">涨停价<span class="red">{{fixd(UpLimit)}}</span></li>
+                <li class="w1">昨收<span style="color:black">{{fixd(PreClose)}}</span></li>
+                <li class="w1">最低<span style="color:{{if MinimumPrice > PreClose}}red{{else if PreClose > MinimumPrice}}green{{else}}black{{/if}}">{{fixd(MinimumPrice)}}</span></li>
+                <li class="w2">成交额<span style="color:black">{{DealMoney}}万</span></li>
+                <li class="w3" style="color:green">跌停价<span class="green">{{fixd(DownLimit)}}</span></li>
+            </ul>
+        </div>
+    </script>
+    <script type="text/template" charset="utf-8" id="templatePriceCounter">
+        <span id="stockNum" data-max="{{maxStockVolume}}">{{stockVolume}}</span>股 <i class="iconfont icon-edit" onclick="changeStockVolumn()"></i>
+        <em>（参考市值：{{fixd(marketValue)}}）</em>
+    </script>
+    <script type="text/template" charset="utf-8" id="templateStalls">
+        {{each List as value}}
+        <tr class="{{value.cls}}">
+            <td width="55px" align="center">{{value.Index}}</td>
+            <td width="80px">{{value.Price}}</td>
+            <td align="right" style="color:#0099FF">{{value.Volume}}</td>
+        </tr>
+        {{/each}}
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            创建模拟策略
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container">
+        <!-- 股票行情 -->
+        <div id="stockInfo" class="stock_info_box">
+            <div class="gp-tit">
+                <div class="gp-name">-<span class="gp-num">-</span></div>
+                <div class="gp-jg red">0.00<span class="red">0.00 &nbsp;&nbsp;&nbsp; 0.00%</span></div>
+                <!--<div class="gp-onoff"><i class="iconfont icon-arrow-copy"></i></div> -->
+            </div>
+            <div class="gp-market">
+                <ul class="market-xq">
+                    <li class="w1">今开<span style="color:black">0.00</span></li>
+                    <li class="w1">最高<span style="color:black">0.00</span></li>
+                    <li class="w2">成交量<span style="color:black">0手</span></li>
+                    <li class="w3" style="color:red">涨停价<span class="red">0.00</span></li>
+                    <li class="w1">昨收<span style="color:black">0.00</span></li>
+                    <li class="w1">最低<span style="color:black">0.00</span></li>
+                    <li class="w2">成交额<span style="color:black">0万</span></li>
+                    <li class="w3" style="color:green">跌停价<span class="green">0.00</span></li>
+                </ul>
+            </div>
+        </div>
+        <div class="tabs" id="wrapper-tabs">
+            <ul>
+                <li class="active"><a href="#">实时行情</a></li>
+                <li><a href="#">k线行情</a> </li>
+            </ul>
+        </div>
+        <!-- 行情表 -->
+        <div class="swiper-container">
+            <div class="swiper-wrapper">
+                <div class="quotation_box swiper-slide">
+                    <div class="line" style="width: 100%;height:17rem;">
+                        <div id="hqInfo" style="width: 100%;height:17rem;">
+
+                        </div>
+                    </div>
+                    <div class="stalls ">
+                        <table id="stalls">
+
+                        </table>
+                    </div>
+                </div>
+                <div class="k_box swiper-slide">
+                    <div id="kBox" style="width: 100%;height:17rem;" class="swiper-no-swiping"></div>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="tabs-container">
+            <div class="wcp-second-box dis-top">
+                <!-- t+1 and t+n
+                <div class="gp-tabs" style="margin-top:10px">
+                    <span>交易模式</span>
+                    <ul id="tradeMode">
+                        <li value="t1"><a>T+1</a></li>
+                        <li class="active" value="tn"><a>T+N</a></li>
+                    </ul>
+                </div> -->
+                <!-- 投入信用金 -->
+                <div class="trade-choose trade-border">
+                    <p>
+                        <span class="trade-left">投入信用金</span>
+                        <i class="trade-text-box"><input id="i-xyj"  onblur="DoCounter()" type="text" class="trade-text" value="500"/></i>
+                        <span class="trade-sm">请输入100的整数倍</span>
+                    </p>
+                    <div>
+                        <span class="trade-left hgt">推荐</span>
+                        <ul class="trade-money">
+                            <li>1000</li>
+                            <li>3000</li>
+                            <li>5000</li>
+                            <li>8000</li>
+                            <li>10000</li>
+                            <li>20000</li>
+                            <li>30000</li>
+                            <li>50000</li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- 买入数量 -->
+                <div class="trade-border trade-num">
+                    <span class="trade-numl">买入数量</span>
+                    <span class="trade-numc" id="s-number"></span>
+                    <span class="newPrice">
+                        <span id="_newPrice" style="font-size:1.2rem;">0.00</span> &nbsp;&nbsp;&nbsp; <span id="_newDiff">0.00%</span>
+                    </span>
+                </div>
+                <!-- 止盈止损 -->
+                <div class="trade-border trade-profit">
+                    <p id="stopWinBox">
+                        止盈：
+                        <span class="pro-bg pro-symbol minus" data-for="i-uplimit" states="reduce">-</span>
+                        <input type="number" class="pro-bg pro-mum red" value="0" style="border:none" id="i-uplimit" step="0.01"></input>
+                        <span class="pro-bg pro-symbol plus" data-for="i-uplimit" states="plus">+</span>
+                        <span class="color2">上涨<i class="red" id="i-ul-per"></i>发起平仓</span>
+
+                    </p>
+                    <p id="stopLossBox">
+                        止损：
+                        <span class="pro-bg pro-symbol minus" data-for="i-downlimit" states="reduce">-</span>
+                        <input type="number" class="pro-bg pro-mum green" value="0" style="border:none" id="i-downlimit" step="0.01"></input>
+                        <span class="pro-bg pro-symbol plus" data-for="i-downlimit" states="plus">+</span>
+                        <span class="color2">下跌<i class="green"  id="i-dn-per"></i>发起平仓</span>
+                    </p>
+                    <p class="trade-expect">预计可赚<i class="red" id="i-earn">0</i>元</p>
+                </div>
+                <div class="trade-deduct" id="T1Data" style="display:none">
+                    <p class="trade-deh1">
+                        <span class="trade-del">持仓时间</span>
+                        <i>1天</i>
+                        <span class="trade-der">支付服务费0元</span>
+                    </p>
+                    <p class="trade-deh2" style="display:none;">
+                        <span class="trade-del">自动延期一天</span>
+                        <span class="trade-der"><button class="switch-qy" id="IsDelay"><span></span></button>
+                        </span>
+                        <i class="trade-sm">若无自动延期将在次交易日14:50分卖出策略仓</i>
+                    </p>
+                </div>
+                <div class="trade-deduct" id="TNData">
+                    <p class="trade-deh1">
+                        <span class="trade-del">持仓服务费为持仓的天数来计算，系统不自动平仓</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 提交策略 -->
+    <div style="height:4.2rem; clear:both;"></div>
+    <div class="submit-stra">
+        <ul>
+            <li><span>总计扣款：</span><span><i class="red" id="orderMoney">0</i>元</span></li>
+            <li><span>可用余额：</span><span><i class="red" id="balance">0</i>元</span></li>
+            <li><input id="readxy" type="checkbox" />同意<i class="blue agree-xy" id="xybtn">策略协议、</i><i id="fxbtn" class="blue agree-xy">风险提示书</i></li>
+        </ul>
+        <p class="wcp-optional-btn" id="addselfstockbtn"><i class="iconfont icon-jia"></i><span>加自选</span></p>
+        <button id="submit" class="wcp-btn-red wcp-btn" onclick="subimt()">提交策略</button>
+    </div>
+
+    <!-- 弹框协议 -->
+    <!-- 弹框 -->
+    <div class="imgbox" id="xybox">
+        <div class="shadow"></div>
+        <i class="agree-xy-close"></i>
+        <div class="agree-xy-con">
+            <div class="agree-xy-nr">
+                <h3 id="xytitle" style="text-align:center;font-size:medium;"></h3>
+                <div id="xycontent"></div>
+            </div>
+            <div class="agree-xy-btn-box">
+                <div class="agree-xy-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-red">确认</button></div>
+                <div class="agree-xy-input"><input id="dontshow" type="checkbox" />下次不再提示</div>
+            </div>
+        </div>
+    </div>
+    <div class="imgbox" id="fxbox">
+        <div class="shadow"></div>
+        <i class="agree-xy-close"></i>
+        <div class="agree-xy-con">
+            <div class="agree-xy-nr">
+                <h3 id="fxtitle" style="text-align:center;font-size:medium;"></h3>
+                <div id="fxcontent">
+                </div>
+            </div>
+            <div class="agree-xy-btn-box">
+                <div class="agree-xy-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-red">确认</button></div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

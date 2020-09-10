@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>关于我们</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet">
+    <link href="../css/index.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <script type="text/javascript" src="../script/layer.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/quotation.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        var jscroller;
+        _apiready = function() {
+            getIntelliPickStockExV2();
+            jscroller = new JRoll("#wrapper");
+            jscroller.pulldown({ //下拉刷新
+                refresh: function(complete) {
+                    $api.dom("#cl").innerHTML = "";
+                    getIntelliPickStockExV2(function() {
+                        complete(); //完成加载
+                    }); //加载资讯
+                }
+            });
+            api.getPrefs({
+                key: 'RiskWarning'
+            }, function(ret, err) {
+                if (ret.value != "false") {
+                    var dialogBox = api.require('dialogBox');
+                    dialogBox.alert({
+                        texts: {
+                            title: '风险提示',
+                            content: '推荐股票为第三方机构模型结果，仅供参考，不作为入市依据，据此入市，风险自担。',
+                            leftBtnTitle: '取消',
+                            rightBtnTitle: '我已了解，下次不再提示'
+                        },
+                        styles: {
+                            bg: '#fff',
+                            w: 300,
+                            title: {
+                                marginT: 20,
+                                iconSize: 40,
+                                titleSize: 14,
+                                titleColor: '#000'
+                            },
+                            content: {
+                                color: '#000',
+                                size: 14
+                            },
+                            left: {
+                                marginB: 7,
+                                marginL: 20,
+                                w: 100,
+                                h: 35,
+                                bg: '#ececec',
+                                color: '#000',
+                                size: 12
+                            },
+                            right: {
+                                marginB: 7,
+                                marginL: 10,
+                                w: 150,
+                                h: 35,
+                                bg: '#2a65a0',
+                                color: '#fff',
+                                size: 12
+                            }
+                        }
+                    }, function(ret) {
+                        if (ret.eventType == 'right') {
+                            api.setPrefs({
+                                key: 'RiskWarning',
+                                value: 'false'
+                            });
+                        }
+                        dialogBox.close({
+                            dialogName: 'alert'
+                        });
+                    });
+                }
+            });
+        };
+
+        function getIntelliPickStockExV2(end) {
+            showLoading();
+            sendGet(ServicesConifg.SelectStocks.getIntelliPickStockExV2,
+                function(data) {
+                    var succ = JSON.parse(data)
+                    if (succ.ret == 0) {
+                        var _html = template("clTemplate", {
+                            List: JSON.parse(succ.content).vtIntelliPickStockEx
+                        });
+                        $("#cl").html(_html);
+                        jscroller.refresh();
+                        var codes = "";
+                        $.each(JSON.parse(succ.content).vtIntelliPickStockEx, function(i, e) {
+                            $.each(e.vtIntelliStock, function(ii, ee) {
+                                codes += ee.sDtSecCode.substring(4) + ",";
+                            });
+                        });
+                        StocksInfo(codes);
+                    }
+                    closeLoading();
+                    if (end)
+                        end();
+                },
+                function(err) {
+                    console.log(err);
+                    closeLoading();
+                    if (end)
+                        end();
+                });
+        }
+
+        function StocksInfo(code) {
+            sendPost(ServicesConifg.Quotation.StocksInfo, {
+                stockcode: code
+            }, function(data) {
+                $(data).each(function(i, e) {
+                    var zf = $("i[data-code='" + e.StockCode + "']");
+                    zf.removeClass("red").removeClass("green");
+                    if (e.DifferentialPersent > 0) {
+                        zf.addClass("red");
+                        zf.html(e.DifferentialPersent.toFixed(2) + "%");
+                    } else if (e.DifferentialPersent < 0) {
+                        zf.addClass("green");
+                        zf.html(e.DifferentialPersent.toFixed(2) + "%");
+                    } else {
+                        zf.html(e.DifferentialPersent.toFixed(2) + "%");
+                    }
+                });
+                setTimeout(function() {
+                    StocksInfo(code);
+                }, 3000);
+            }, function(err) {
+                console.log(err);
+            }, false, true);
+        }
+
+        function godetail(id) {
+            api.openWin({
+                name: 'selectstock-detail',
+                url: 'selectstock-detail.html',
+                pageParam: {
+                    id: id
+                }
+            });
+
+        }
+
+        var goaddStrategy = function(code) {
+            event.stopPropagation();
+            api.openWin({
+                name: 'addStrategy',
+                url: 'addStrategy.html',
+                pageParam: {
+                    stockCode: code
+                }
+            });
+        }
+
+        var search = function() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'search',
+                    url: 'search.html'
+                });
+            });
+        };
+        var goEvent = function(id) {
+            api.openWin({
+                name: 'selectstock-event',
+                url: 'selectstock-event.html',
+                pageParam: {
+                    id: id
+                }
+            });
+        }
+        var goHot = function() {
+            api.openWin({
+                name: 'selectstock-hot',
+                url: 'selectstock-hot.html'
+            });
+        }
+        var goCondition = function() {
+            api.openWin({
+                name: 'selectstock-condition',
+                url: 'selectstock-condition.html'
+            });
+        }
+        var goRank = function() {
+            api.openWin({
+                name: 'selectstock-rank',
+                url: 'selectstock-rank.html'
+            });
+        }
+    </script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 搜索 -->
+    <form>
+        <div class="search-form-cl">
+            <i class="iconfont icon-sousuo"></i>
+            <input type="text" class="search-text" placeholder="点击搜索股票" readonly="readonly" onclick="search()">
+        </div>
+    </form>
+    <div id="wrapper">
+        <div id="scrollerBox" class="scrollerBox">
+            <!-- 图标 -->
+            <div class="smartnav wcp-first-box">
+                <ul>
+                    <li>
+                        <a onclick="goHot()">
+                            <i class="t1"></i>
+                            <span>今日热股</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="goEvent(18)">
+                            <i class="t5"></i>
+                            <span>事件驱动</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="goCondition()">
+                            <i class="t6"></i>
+                            <span>条件选股</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="goRank()">
+                            <i class="t7"></i>
+                            <span>策略热榜</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="goEvent(14)">
+                            <i class="t3"></i>
+                            <span>涨停预测</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="goEvent(16)">
+                            <i class="t4"></i>
+                            <span>量化选股</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="goEvent(17)">
+                            <i class="t2"></i>
+                            <span>价值挖掘</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="goEvent(33)">
+                            <i class="t8"></i>
+                            <span>长线牛股</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <!-- 今日精选 -->
+            <div class="smart-vic">
+                <ul id="cl">
+
+                </ul>
+            </div>
+            <div style="height:3.6rem;"></div>
+        </div>
+    </div>
+    <script type="text/template" id="clTemplate">
+        {{each List as value i}}
+        <li class="wcp-second-box" onclick="godetail('{{value.sId}}')">
+            {{if i==0}}
+            <h3 class="smart-tit">今日精选</h3>
+            <div class="alert-danger" onclick="javascript:event.stopPropagation();$('.alert-danger').hide('slow');" style="width:94%; margin:.65rem 3%; color: #a94442; text-align: center; line-height: 1.6rem; font-size: .875rem; background-color: #f2dede; border-color: #ebccd1; border: 1px solid transparent; border-radius: 4px; padding: .2rem 0;">
+                <strong>提示！</strong>推荐股票为第三方机构模型结果，仅供参考，<br>不作为入市依据，据此入市，风险自担
+            </div>
+            {{/if}}
+            <div class="smart-vic-con">
+                <span class="fl smart-vic-rate">
+                <i class="red">{{(value.fMaxSuccPercent*100).toFixed(2)}}%</i>胜率
+            </span>
+                <span class="smart-vic-name">{{value.sTitle}}</span>
+                <span class="smart-vic-zf">
+                {{value.sUpBanner}}
+                <i class="red">{{(value.fTodayIncrease*100).toFixed(2)}}%</i>
+            </span>
+                <span class="smart-vic-dy">{{value.sSubscriptionsCount}} | {{value.sSource}} {{value.sDate}}</span>
+            </div>
+            <div class="smart-vic-tj">
+                {{each value.vtIntelliStock as value1 ii}}
+                <span onclick="goaddStrategy('{{value1.sDtSecCode.substring(4)}}')">
+                {{value1.sSecName}}
+                <i class="data-zf" data-code="{{value1.sDtSecCode.substring(4)}}">0.00%</i>
+            </span> {{/each}}
+            </div>
+        </li>
+        {{/each}}
+    </script>
+</body>
+
+</html>

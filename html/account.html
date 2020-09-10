@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>我的账户</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            QueryUserInfo(function() {
+                var userInfo = getUserInfo();
+                
+                $api.dom("#money").innerHTML = "<span>账户总资产</span>" + (userInfo.Money || 0);
+                $api.dom("#balance").innerHTML = "<span>账户余额</span>" + (userInfo.Balance || 0);
+                $api.dom("#frozenMoney").innerHTML = "<span>冻结信用金</span>" + (userInfo.FrozenMoney || 0);
+            });
+        };
+        var withdraw = function() {
+            api.openWin({
+                name: 'withdraw',
+                url: 'withdraw.html'
+            });
+        };
+        var recharge = function() {
+            api.openWin({
+                name: 'recharge',
+                url: 'recharge.html'
+            });
+        };
+        var accountLs = function() {
+            api.openWin({
+                name: 'accountLs',
+                url: 'account-ls.html'
+            });
+        };
+
+        //查询用户信息并缓存
+        function QueryUserInfo(end) {
+            sendGet(ServicesConifg.Account.QueryUserInfo,
+                function(succ) {
+                    saveUserInfo(succ);
+                    if (end)
+                        end();
+                },
+                function(err) {
+                    if (end)
+                        end();
+                }
+            );
+        }
+    </script>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            我的账户
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container">
+        <!-- accont -->
+        <div class="wcp-first-box">
+            <ul class="account">
+                <li id="money"><span>账户总资产</span>0</li>
+                <li id="balance"><span>账户余额</span>0</li>
+                <li id="frozenMoney"><span>冻结信用金</span>0</li>
+            </ul>
+            <div class="acc-btn">
+                <a href="#" onclick="recharge()"><button class="wcp-btn wcp-btn-pad02 wcp-btn-red">充值</button></a>
+                <a href="#" onclick="withdraw()"><button class="wcp-btn wcp-btn-pad02 wcp-btn-opcity">提现</button></a>
+            </div>
+        </div>
+
+        <!-- 1-ico -->
+        <div class="wcp-second-box">
+            <ul class="my-sub no-ico">
+                <li>
+                    <a href="#" onclick="accountLs()">
+                        <span class="sub-tit">资产流水</span>
+                        <i class="iconfont icon-icon"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,376 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>微操盘</title>
+
+    <link href="css/common.css" type="text/css" rel="stylesheet" />
+    <link href="fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="css/index.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="script/api.js"></script>
+    <script type="text/javascript" src="script/app.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="js/main.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="script/core-min.js"></script>
+    <script type="text/javascript" src="script/aes.js"></script>
+    <script type="text/javascript" src="script/secret.js"></script>
+    <script type="text/javascript" src="script/cacheAjax.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            //首次启动打开欢迎页
+            var isFristOpen = api.getPrefs({
+                sync: true,
+                key: 'isFristOpen'
+            });
+            if (isFristOpen != "No") {
+                api.openWin({
+                    name: 'start',
+                    slidBackEnabled:false,
+                    url: 'start.html'
+                });
+            }
+
+            api.setStatusBarStyle({
+                style: 'light',
+                color: "#fa5c36"
+            });
+            $api.setStorage('footHeight', $("#footer").height());
+            funIniGroup();
+            initUser();
+            //验证token失败事件
+            api.addEventListener({
+                name: 'accessVerifyFail'
+            }, function(ret, err) {
+                showToast("授权信息已过期，请重新授权", function() {
+                    api.openWin({
+                        name: 'login',
+                        url: 'login.html'
+                    });
+                }, 1000);
+            });
+
+            api.addEventListener({
+                name: 'goHome'
+            }, function(ret, err) {
+                changeSwitch("tab-home");
+            });
+
+            api.addEventListener({
+                name: 'goStrategy'
+            }, function(ret, err) {
+                changeSwitch("tab-strategy");
+            });
+
+            api.addEventListener({
+                name: 'goSelfstock'
+            }, function(ret, err) {
+                changeSwitch("tab-selfstock");
+            });
+
+            api.addEventListener({
+                name: 'goRank'
+            }, function(ret, err) {
+                changeSwitch("tab-rank");
+            });
+            api.addEventListener({
+                name: 'goSelectStock'
+            }, function(ret, err) {
+                changeSwitch("tab-selectstock");
+            });
+            api.addEventListener({
+                name: 'goMine'
+            }, function(ret, err) {
+                changeSwitch("tab-mine");
+            });
+
+            api.addEventListener({
+                name: 'goLogin'
+            }, function(ret, err) {
+                showToast("请先登录", function() {
+                    api.openWin({
+                        name: 'login',
+                        url: 'login.html'
+                    });
+                }, 1000);
+            });
+
+            api.addEventListener({
+                name: 'offline'
+            }, function(ret, err) {
+                api.setFrameGroupIndex({
+                    name: 'group',
+                    index: 3,
+                    reload: true
+                });
+            });
+            api.addEventListener({
+                name: 'loginBack'
+            }, function(ret, err) {
+                QueryUserInfo();
+            });
+        };
+        //
+        // function checkUpdate(){
+        //     var mam = api.require("mam");
+        //     mam.checkUpdate(function( ret, err ){
+        //         if(ret.status)
+        //         {
+        //             if(ret.result.update)
+        //             {
+        //                 if(ret.result.closed)
+        //                 {
+        //
+        //                 }
+        //                 else {
+        //                   //选择更新
+        //                 }
+        //             }
+        //             else {
+        //               if(ret.result.closed)
+        //               {
+        //                   api.alert({
+        //                       title: '版本被关闭',
+        //                       msg: ret.result.closeTip,
+        //                   }, function(ret, err){
+        //                       api.closeWidget({
+        //                           id:api.appId ,
+        //                           retData: {
+        //                               name: 'closeWidget'
+        //                           },
+        //                           silent : true
+        //                       });
+        //
+        //                   });
+        //
+        //               }
+        //             }
+        //
+        //         }
+        //     });
+        //
+        // };
+
+        //初始化用户信息
+        function initUser() {
+            var userAccess = getUserAccess();
+            if (userAccess) //有登录用户信息
+            {
+                showLoading("登录中");
+                sendGet(ServicesConifg.Account.AccessLogin,
+                    function(succ) {
+                        if (saveUserAccess(succ.access_token)) {
+                            QueryUserInfo();
+                        }
+                    },
+                    function(err) {
+                        showToast(err);
+                        clearLoginStatus(); //授权错误后，清除登录状态
+                        closeLoading();
+                    }
+                );
+            } else {
+                clearLoginStatus();
+            }
+        }
+
+        //查询用户信息并缓存
+        function QueryUserInfo() {
+            sendGet(ServicesConifg.Account.QueryUserInfo,
+                function(succ) {
+                    closeLoading();
+                    saveUserInfo(succ);
+                    //绑定消息推送用户
+                    initPush(succ.Phone, succ.NickName);
+                },
+                function(err) {
+                    closeLoading();
+                    showToast(err);
+                }
+            );
+        }
+
+        //初始化-组
+        function funIniGroup() {
+            var frames = [];
+            //注入首页
+            frames.push({
+                name: 'home',
+                url: './html/home.html',
+                bgColor: 'rgba(0,0,0,.2)',
+                bounces: false
+            });
+            //注入策略页
+            frames.push({
+                name: 'strategy',
+                url: './html/strategy.html',
+                bgColor: 'rgba(0,0,0,.2)',
+                bounces: false,
+                customRefreshHeader: "UIPullRefresh"
+            });
+            //注入选股页
+            frames.push({
+                name: 'selectstock',
+                url: './html/selectstock.html',
+                bgColor: 'rgba(0,0,0,.2)',
+                bounces: false
+            });
+            //注入自选股
+            frames.push({
+                name: 'selfstock',
+                url: './html/selfstock.html',
+                bgColor: 'rgba(0,0,0,.2)',
+                bounces: false
+            });
+            //注入个人中心页
+            frames.push({
+                name: 'mine',
+                url: './html/mine.html',
+                bgColor: 'rgba(0,0,0,.2)',
+                bounces: false
+            });
+            api.openFrameGroup({
+                name: 'group',
+                scrollEnabled: false,
+                rect: {
+                    x: 0,
+                    y: 0,
+                    w: api.winWidth,
+                    h: api.winHeight - $("#footer").height()
+                },
+                index: 0,
+                frames: frames,
+                preload: 0
+            }, function(ret, err) {});
+        };
+
+        var changeSwitch = function(tag) {
+            if (tag == "tab-strategy") //如果是策略面板
+            {
+                var userInfo = getUserAccess(); //获取用户权限信息
+                if (userInfo == null) {
+                    $api.setStorage('loginStatus', 'strategy'); //表示策略按钮过去的登录
+                    api.openWin({
+                        name: 'login',
+                        url: 'login.html'
+                    });
+                    return;
+                }
+            }
+
+            if (tag == $api.dom('#footer li.on').id) return;
+            var eFootLis = $api.domAll('#footer li'),
+                index = 0;
+
+            for (var i = 0, len = eFootLis.length; i < len; i++) {
+                if (tag == eFootLis[i].id) {
+                    index = i;
+                } else {
+                    $api.removeCls(eFootLis[i], 'on');
+                }
+            }
+            $api.addCls(eFootLis[index], 'on');
+            api.setFrameGroupIndex({
+                name: 'group',
+                index: index
+            });
+            switch (index) {
+                case 0:
+                    var jsfun = 'loadNiuRen();';
+                    api.execScript({
+                        frameName: 'home',
+                        script: jsfun
+                    });
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        function initPush(userPhone, userName) {
+            var push = api.require('push');
+            push.unbind({
+                userName: Comment.Str.Encrypt(userName),
+                userId: Comment.Str.Encrypt(userPhone)
+            }, function(ret, err) {
+
+            });
+            push.bind({
+                userName: Comment.Str.Encrypt(userName),
+                userId: Comment.Str.Encrypt(userPhone)
+            }, function(ret, err) {
+
+            });
+
+            push.setListener(function(ret, err) {
+                if (ret) {
+                    console.log(JSON.stringify(ret));
+                    switch (ret.value) {
+                        case "充值成功":
+                            api.openWin({
+                                name: 'account',
+                                url: 'html/account.html'
+                            });
+                            break;
+                        case "您有一笔提现已经到账":
+                            api.openWin({
+                                name: 'account-ls',
+                                url: 'html/account-ls.html'
+                            });
+                            break;
+                        case "测试":
+                            api.openWin({
+                                name: 'mine',
+                                url: 'html/mine.html'
+                            });
+                            break;
+                        case "您反馈的问题客服已回复":
+                            api.openWin({
+                                name: 'messagels',
+                                url: 'html/messagels.html',
+                                pageParam: {
+                                    mstype: 1
+                                }
+                            });
+                            break;
+                        default:
+                            if (ret.value.indexOf("关注") > -1) {
+                                //订阅消息
+                                api.openWin({
+                                    name: 'ordermessage',
+                                    url: 'html/orderMessage.html'
+                                });
+                            }
+                            break;
+                    }
+                } else {
+
+                }
+            });
+        }
+    </script>
+
+
+</head>
+
+<body>
+    <div class="footer" id="footer">
+        <ul>
+            <li id="tab-home" class="on"><a href="#" onclick="changeSwitch('tab-home');"><i class="iconfont icon-shouye-shouye"></i><span>首页</span></a></li>
+            <li id="tab-strategy"><a href="#" onclick="changeSwitch('tab-strategy');"><i class="iconfont icon-celve101"></i><span>策略</span></a></li>
+            <li id="tab-selectstock"><a href="#" onclick="changeSwitch('tab-selectstock');"><i class="iconfont icon-xuangu"></i><span>选股</span></a></li>
+            <li id="tab-selfstock"><a href="#" onclick="changeSwitch('tab-selfstock');"><i class="iconfont icon-xuanze"></i><span>自选</span></a></li>            
+            <li id="tab-mine"><a href="#" onclick="changeSwitch('tab-mine');"><i class="iconfont icon-me"></i><span>个人中心</span></a></li>
+        </ul>
+    </div>
+
+</body>
+
+</html>

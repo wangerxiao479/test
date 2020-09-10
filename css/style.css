@@ -1,0 +1,25 @@
+
+.hover{ opacity: .8; }
+
+.flex-wrap{ display: -webkit-box;	display: -webkit-flex;	display: flex; }
+.flex-con{     -webkit-box-flex: 1;     -webkit-flex: 1;    flex: 1;}
+.flex-vertical{ -webkit-box-orient: vertical;-webkit-flex-flow: column;flex-flow: column;}
+
+.border-t,
+.border-b{ position:relative;  }
+.border-t:before,
+.border-b:after{     content: '';     position: absolute;     left: 0;  top:0;     background: #ddd;   right:0;    height: 1px;     -webkit-transform: scaleY(0.5);             transform: scaleY(0.5);     -webkit-transform-origin: 0 0;             transform-origin: 0 0; }
+.border-b:after{ top:auto; bottom:0;  }
+
+#wrap{ height: 100%; }
+
+
+.jroll-infinite-tip{ height: 40px; font-size: 1rem; line-height: 40px; color: gray; text-align: center; width: 100%;}
+.jroll-infinite-page:empty{ min-height: 400px; background:center center no-repeat url(../images/nothing.png); background-size: 40% auto;}
+.jroll-infinite-page:empty + .jroll-infinite-tip{ display: none;}
+.box-crossr{ height: 2.2rem; line-height: 2.2rem;}
+.box-crossr label{ margin-right: 10px;float: left; }
+.box-crossr .wan-spinner{ float: left;}
+.tabs li a{font-size: 1rem;}
+
+.wp-text{ border:solid 1px #ccc; padding: .5rem; font-size: 1rem;}

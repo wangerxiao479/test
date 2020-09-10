@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>关于我们</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet">
+    <link href="../css/index.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/quotation.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            sendGet(ServicesConifg.SelectStocks.getRealTimeHotStock, function(result) {
+                var succ = JSON.parse(result);
+                if (succ.ret == 0) {
+                    $("#hotul").html(template("liTemplate", {
+                        List: JSON.parse(succ.content).vItem
+                    }));
+                    var codes = "";
+                    $.each(JSON.parse(succ.content).vItem, function(i, e) {
+                        codes += e.sDtSecCode.substring(4) + ",";
+                    });
+                    StocksInfo(codes);
+                }
+            });
+        };
+
+        function StocksInfo(code) {
+            sendPost(ServicesConifg.Quotation.StocksInfo, {
+                stockcode: code
+            }, function(data) {
+                $(data).each(function(i, e) {
+                    var zf = $("span[data-code='" + e.StockCode + "']");
+                    zf.removeClass("red").removeClass("green");
+                    if (e.DifferentialPersent > 0) {
+                        zf.addClass("red");
+                        zf.html(e.DifferentialPersent.toFixed(2) + "%");
+                    } else if (e.DifferentialPersent < 0) {
+                        zf.addClass("green");
+                        zf.html(e.DifferentialPersent.toFixed(2) + "%");
+                    } else {
+                        zf.html(e.DifferentialPersent.toFixed(2) + "%");
+                    }
+                });
+                setTimeout(function() {
+                    StocksInfo(code);
+                }, 3000);
+            }, function(err) {
+                console.log(err);
+            }, false, true);
+        }
+
+        var goTabHome = function() {
+            api.sendEvent({
+                name: 'goHome'
+            });
+            api.closeWin();
+        }
+        var goTabStrategy = function() {
+            api.sendEvent({
+                name: 'goStrategy'
+            });
+            api.closeWin();
+        }
+        var goTabSelfstock = function() {
+            api.sendEvent({
+                name: 'GetSelfStock'
+            });
+            api.sendEvent({
+                name: 'goSelfstock'
+            });
+            api.closeWin();
+        }
+        var goTabRank = function() {
+            api.sendEvent({
+                name: 'goRank'
+            });
+            api.closeWin();
+        }
+        var goTabMine = function() {
+            api.sendEvent({
+                name: 'goMine'
+            });
+            api.closeWin();
+        }
+        var goaddStrategy = function(code) {
+            event.stopPropagation();
+            api.openWin({
+                name: 'addStrategy',
+                url: 'addStrategy.html',
+                pageParam: {
+                    stockCode: code
+                }
+            });
+        }
+    </script>
+</head>
+
+<body>
+
+
+
+    <!-- header -->
+    <div class="header" style="position:fixed;">
+        <a href="javascript:history.back(-1);" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            六牛热股
+        </div>
+
+    </div>
+    <div style="height:3rem; clear:both;"></div>
+    <div class="alert-danger" onclick="javascript:$('.alert-danger').hide('slow');" style="width:94%; margin:.65rem 3%; color: #a94442; text-align: center; line-height: 1.6rem; font-size: .875rem; background-color: #f2dede; border-color: #ebccd1; border: 1px solid transparent; border-radius: 4px; padding: .2rem 0;">
+        <strong>提示！</strong>推荐股票为第三方机构模型结果，仅供参考，<br>不作为入市依据，据此入市，风险自担
+    </div>
+    <!-- 内容 -->
+    <div class="s-hot-box wcp-first-box">
+        <p class="s-hot-head">
+            <span class="w1">股票名称</span>
+            <span class="w2">涨跌幅</span>
+            <span class="w2">关注度</span>
+        </p>
+        <ul class="s-hot" id="hotul"></ul>
+    </div>
+    <script type="text/template" id="liTemplate">
+        {{each List as value i}}
+        <li>
+            <span class="w1 s-hot-name">
+            <a onclick="goaddStrategy('{{value.sDtSecCode.substring(4)}}')">
+                {{value.sSecName}}
+            </a>
+            {{if value.iChangePos>0}}
+            <i class="red">
+                <b class="iconfont icon-up"></b>
+                {{value.iChangePos}}
+            </i>
+            {{else if value.iChangePos<0}}
+            <i class="green">
+                <b class="iconfont icon-down"></b>
+                {{value.iChangePos}}
+            </i>
+            {{else}}
+            <i class="color2">
+                <b></b>
+                {{value.iChangePos}}
+            </i>
+            {{/if}}
+        </span>
+            <span class="w2 s-hot-munb" data-code="{{value.sDtSecCode.substring(4)}}">0.00%</span>
+            <span class="w2 s-hot-munb">{{value.iAttenDegree}}</span>
+        </li>
+        {{/each}}
+    </script>
+
+    <!-- <div style="height:3.6rem; clear:both;"></div>
+    <div class="footer" id="footer">
+        <ul>
+            <li id="tab-home"><a href="#" onclick="goTabHome();"><i class="iconfont icon-shouye-shouye"></i><span>首页</span></a></li>
+            <li id="tab-strategy"><a href="#" onclick="goTabStrategy();"><i class="iconfont icon-celve101"></i><span>策略</span></a></li>
+            <li id="tab-selfstock"><a href="#" onclick="goTabSelfstock();"><i class="iconfont icon-xuanze"></i><span>自选</span></a></li>
+            <li id="tab-selectstock"><a href="#" onclick="goTabselectstock();"><i class="iconfont icon-xuangu"></i><span>选股</span></a></li>
+            <li id="tab-mine"><a href="#" onclick="goTabMine();"><i class="iconfont icon-me"></i><span>个人中心</span></a></li>
+        </ul>
+    </div> -->
+</body>
+
+</html>

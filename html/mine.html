@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>文档</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/my.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            api.setStatusBarStyle({
+                style: 'light',
+                color: "#f40303"
+            });
+            api.addEventListener({
+                name: 'userInfoBack'
+            }, function(ret, err) {
+                if (ret) {
+                    QueryUserInfo();
+                } else {}
+            });
+            api.addEventListener({
+                name: 'headChange'
+            }, function(ret, err) {
+                if (ret) {
+                    BindUser(getUserInfo());
+                } else {
+
+                }
+            });
+            var accessToken = getUserAccess();
+            if (accessToken) {
+                var user = getUserInfo();
+                BindUser(user);
+            }
+
+            var jscroller = new JRoll("#wrapper");
+            jscroller.pulldown({
+                refresh: function(complete) {
+                    QueryUserInfo(function() {
+                        complete();
+                    });
+                }
+            });
+        };
+        $(function() {
+            $("#btnLogin,.icon-shezhi").click(function() {
+                var accessToken = getUserAccess();
+                if (accessToken) {
+                    api.openWin({
+                        name: 'userInfo',
+                        url: 'userInfo.html'
+                    });
+                } else {
+                    api.openWin({
+                        name: 'login',
+                        url: '../login.html'
+                    });
+                }
+            });
+        });
+        //查询用户信息并缓存
+        function QueryUserInfo(end) {
+            sendGet(ServicesConifg.Account.QueryUserInfo,
+                function(succ) {
+                    saveUserInfo(succ);
+                    BindUser(succ);
+                    if (end)
+                        end();
+                },
+                function(err) {
+                    if (end)
+                        end();
+                }
+            );
+        }
+
+        function BindUser(succ) {
+            $("#userHeader").attr("src", succ.UserPortrait)
+            $("#userName").html(succ.NickName);
+            $("#userBalance").html(succ.Balance);
+            $("#userSubordinateMan").html(succ.Subordinate + "人");
+            $("#userCommission").html(succ.Commission + "元");
+            $("#userWelfare").html(succ.Welfare + "元");
+            if (succ) {
+                sendGet(ServicesConifg.Account.QueryUnShareTicketActivity,
+                    function(result) {
+                        if (result > 0) {
+                            $("#unsharenum").show();
+                            $("#unsharenum").html(result);
+                        } else {
+                            $("#unsharenum").hide();
+                        }
+                    },
+                    function(err) {}
+                );
+
+            }
+        };
+
+        function FeedBack() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'feedBack',
+                    url: 'feedBack.html'
+                });
+            });
+        };
+
+        function Agreement() {
+            api.openWin({
+                name: 'agreement',
+                url: 'agreement.html'
+            });
+        };
+
+        function AboutUs() {
+            api.openWin({
+                name: 'aboutus',
+                url: 'aboutus.html'
+            });
+        };
+
+        function Account() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'account',
+                    url: 'account.html'
+                });
+            });
+        };
+
+        function CallUs() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'hotline',
+                    url: 'hotline.html'
+                });
+            });
+        };
+
+        function CommonProblem() {
+            api.openWin({
+                name: 'problems',
+                url: 'problems.html'
+            });
+        };
+
+        function Voucher() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'voucherls',
+                    url: 'voucher-ls.html'
+                });
+            });
+        };
+
+        function Spread() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'spread',
+                    url: 'spread.html'
+                });
+            });
+        }
+
+        function GiftActivity() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'giftactivity',
+                    url: 'giftactivity.html'
+                });
+            });
+        }
+
+        function MyuserRecord() {
+            var user = getUserInfo();
+            checkLogin(function() {
+                api.openWin({
+                    name: 'userRecord',
+                    url: 'userRecord.html',
+                    pageParam: {
+                        userId: user.UserId
+                    }
+                });
+            });
+        }
+
+        function MySubscribe() {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'mysubscribe',
+                    url: 'mysubscribe.html'
+                });
+            });
+        }
+    </script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 92%;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <div class="search_box nei_tit">
+            个人中心
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container" id="wrapper">
+        <div id="scroller">
+            <!-- my-infor -->
+            <div class="my-img">
+                <a href="#" id="btnLogin">
+                    <img id="userHeader" src="../images/general-tx.png" onerror="this.src = '../images/general-tx.png'">
+                    <span class="my-name" id="userName">登录/注册</span>
+                    <a href="#"><i class="iconfont icon-shezhi"></i></a>
+                </a>
+                <a href="#" onclick="Account()"><span class="zh-ye">可用余额：<b id="userBalance">0.00</b>元<i class="iconfont icon-icon"></i></span></a>
+            </div>
+
+            <!-- 1-ico -->
+            <div class="wcp-second-box">
+                <ul class="my-sub">
+                    <li>
+                        <a href="#" onclick="Spread()">
+                            <div class="sub-half">
+                                <i class="iconfont icon-tuiguang"></i>
+                                <span class="sub-tit">我的推广</span>
+                            </div>
+                            <div class="sub-half">
+                                <span class="sub-tg">已推广：<em class="sub-tg-con" id="userSubordinateMan">0人</em></span>
+                                <span class="sub-tg">总提成：<em class="sub-tg-con" id="userCommission">0元</em></span>
+                            </div>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 3-ico -->
+            <div class="wcp-second-box">
+                <ul class="my-sub">
+                    <li>
+                        <div class="sub-half">
+                            <a href="#" onclick="GiftActivity()">
+                                <i class="iconfont icon-hongbao"></i>
+                                <span class="sub-half-con">待分享红包
+                                  <em class="sub-sm">赚钱喜悦，总结分享</em>
+                                  <b id="unsharenum" style="font-weight: normal; display:none; background-color: #f00; color: #fff; font-size: 12px; border-radius: 100px; padding: 0 7px; position: absolute; left: 37%; top: 12px;">1</b>
+                                </span>
+                            </a>
+                        </div>
+                        <div class="sub-half">
+                            <a href="#" onclick="Voucher()">
+                                <i class="iconfont icon-wodeqiaquan"></i>
+                                <span class="sub-half-con">我的卡券<em class="sub-sm">红包，涨停卡，翻倍卡</em></span>
+                            </a>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="iconfont icon-diyongxianjin"></i>
+                            <span class="sub-tit">策略抵用金</span>
+                            <span class="sub-ye">余额：<em class="sub-ye-con" id="userWelfare">0元</em></span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 4-ico -->
+            <div class="wcp-second-box">
+                <ul class="my-sub">
+                    <!-- <li>
+                        <a onclick="MyuserRecord()">
+                            <i class="iconfont icon-zhanji"></i>
+                            <span class="sub-tit">我的战绩</span>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li> -->
+                    <li>
+                        <a href="#" onclick="MySubscribe()">
+                            <i class="iconfont icon-dingyue" style="font-size:1rem;"></i>
+                            <span class="sub-tit">我的订阅</span>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="FeedBack()">
+                            <i class="iconfont icon-wentifankui"></i>
+                            <span class="sub-tit">问题反馈</span>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="Agreement()">
+                            <i class="iconfont icon-xieyi"></i>
+                            <span class="sub-tit">相关协议</span>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="AboutUs()">
+                            <i class="iconfont icon-guanyuwomen"></i>
+                            <span class="sub-tit">关于我们</span>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="CallUs()">
+                            <i class="iconfont icon-kefurexian"></i>
+                            <span class="sub-tit">客服热线</span>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="CommonProblem()">
+                            <i class="iconfont icon-jieda"></i>
+                            <span class="sub-tit">常见问题</span>
+                            <i class="iconfont icon-icon"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

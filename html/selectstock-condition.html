@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>关于我们</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet">
+    <link href="../css/index.css" type="text/css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/iosSelect.css">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/quotation.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../js/iosSelect.js"></script>
+    <script type="text/javascript">
+        var _data = {};
+        var _selectstring = "";
+        var _count = 0;
+        _apiready = function() {
+            sendGet(ServicesConifg.SelectStocks.getInterface, function(data) {
+                var succ = JSON.parse(data)
+                if (succ.ret == 0) {
+                    _data = JSON.parse(succ.Content).vtTypeConditionSearch;
+                    $(_data).each(function(i, e) {
+                        var htmlitem = "<h3><i></i>" + e.sTypeShowWord + "</h3><ul>"
+                        $(e.vtConditionSearch).each(function(ii, ee) {
+                            if (ii % 3 == 0) {
+                                htmlitem += "<li data-title='" + e.sTypeShowWord + "'>";
+                            }
+                            if (ii % 3 == 2) {
+                                htmlitem += "<span data-id='" + ee.eField + "' class='last'>" + ee.sFieldShowWord + "</span>"
+                            } else {
+                                htmlitem += "<span data-id='" + ee.eField + "'>" + ee.sFieldShowWord + "</span>"
+                            }
+                            if (ii % 3 == 2) {
+                                htmlitem += "</li>";
+                            }
+                        });
+
+                        htmlitem += "</ul>";
+                        $(".smart-condition").append(htmlitem);
+                    });
+
+
+                    $(".smart-condition li span").click(function() {
+                        var that = this;
+                        var id = $(this).data("id");
+                        var title = $(this).parent().data("title");
+                        var d1 = _data.filter(function(item) {
+                            return item.sTypeShowWord === title;
+                        });
+                        var d2 = d1[0].vtConditionSearch.filter(function(item) {
+                            return item.eField === id;
+                        });
+                        var d3 = [];
+                        d3[0] = new Array();
+                        $(d2[0].vtRange).each(function(i, e) {
+                            d3[0].push({
+                                'id': e,
+                                'value': e
+                            });
+                        });
+                        if (!$(this).hasClass("cur")) {
+                            var example = new IosSelect(1, d3, {
+                                container: '.container', // 容器class
+                                title: d2[0].sFieldShowWord, // 标题
+                                itemHeight: 50, // 每个元素的高度
+                                itemShowCount: 5, // 每一列显示元素个数，超出将隐藏
+                                oneLevelId: d3[0][0].value,
+                                callback: function(selectOneObj) { // 用户确认选择后的回调函数
+                                    $(that).addClass("cur");
+                                    $(that).append("<i>" + selectOneObj.value + "</i>");
+                                    _selectstring += id + "_" + selectOneObj.value + "|";
+                                    _count++;
+                                    $("#count").html(_count);
+                                }
+                            });
+
+                        } else {
+                            $(that).removeClass("cur");
+                            $(that).html(d2[0].sFieldShowWord);
+                            var reg = new RegExp(id + "_(\\S*?)\\|", "g");
+                            _selectstring = _selectstring.replace(reg, ""); //第一个参数是正则表达式。
+                            _count--;
+                            $("#count").html(_count);
+                        }
+                    });
+                }
+            });
+        };
+
+        function goresult() {
+            api.openWin({
+                name: 'selectstock-result',
+                url: 'selectstock-result.html',
+                slidBackEnabled:false,
+                pageParam: {
+                    condition: _selectstring
+                }
+            });
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- header -->
+    <div class="header" style="position:fixed;">
+        <a href="javascript:history.back(-1);" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            条件选股
+        </div>
+
+    </div>
+    <div style="height:3rem; clear:both;"></div>
+    <!-- 策略推荐个股 -->
+    <div class="smart-condition">
+        <!-- <h3><i></i>最近热门</h3>
+      <ul>
+          <li>
+              <span class="cur">K线形态<i>上升通道</i></span>
+              <span>公告利好</span>
+              <span class="last">MACD</span>
+          </li>
+          <li>
+              <span>K线形态</span>
+              <span>公告利好</span>
+              <span class="last">MACD</span>
+          </li>
+      </ul> -->
+    </div>
+    <!-- 查看结果 -->
+    <div style="height:3.2rem; clear:both;"></div>
+    <div class="smart-sub">
+        <p>已经选择<span id="count" class="red">0</span>策略</p>
+        <a onclick="goresult()"><button class="wcp-btn-red wcp-btn">查看结果</button></a>
+    </div>
+</body>
+
+</html>

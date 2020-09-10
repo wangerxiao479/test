@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>微操盘</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+    <link href="../css/my.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        var hKey = "$historyStock";
+        var tradeType;
+        _apiready = function() {
+            readHistorySearch();
+            tradeType = api.pageParam.tradeType || "0";
+
+            $api.addEvt($api.dom("#frmSearch"), 'input', function(er) {
+                var key = $api.dom("#frmSearch").value;
+                if (key) {
+                    $("#historyBox").hide();
+                    $("#searchBox").show();
+                    searchStock(key);
+                } else {
+                    $("#historyBox").show();
+                    $("#searchBox").hide();
+                }
+            });
+            template.helper("fixd", function(dec) {
+                return dec.toFixed(2);
+            });
+            api.addEventListener({
+                name: 'keyback'
+            }, function(ret, err) {
+                var key = $api.dom("#frmSearch").value;
+                if (key) {
+                    $("#historyBox").show();
+                    $("#searchBox").hide();
+                    $api.dom("#frmSearch").value = "";
+                } else {
+                    api.closeWin();
+                }
+            });
+            readHotSearch();
+        };
+
+        function StockInfo(stockCode, stime) {
+            var timestamp = (new Date()).valueOf();
+            this.StockCode = stockCode;
+            if (stime) {
+                timestamp = stime;
+            }
+            this.SearchTime = timestamp; //时间戳
+        }
+        var readHistorySearch = function() {
+            var data = $api.getStorage(hKey);
+            if (data) {
+                var _data = $api.strToJson(data);
+                _data.sort(function(a, b) {
+                    return b.SearchTime - a.SearchTime;
+                });
+                var pParam = new Object();
+                pParam.stockcode = "";
+                for (var i in _data) {
+                    pParam.stockcode = pParam.stockcode + _data[i].StockCode + ",";
+                }
+                sendPost(ServicesConifg.Quotation.StocksInfo, pParam,
+                    function(succ) {
+                        for (var i in succ) {
+                            if (succ[i].NewPrice.toFixed(2) == 0.00) {
+                                succ[i].NewPrice = succ[i].YesterdayCollect;
+                            }
+                        }
+                        document.getElementById("historySearch").innerHTML = template("templateStock", {
+                            List: succ
+                        });
+                    },
+                    function(err) {
+                        showToast("行情服务器异常");
+                    }, false, true
+                );
+            }
+        };
+        var p = 1;
+        /*读取热门股票===这里请求接口*/
+        var readHotSearch = function() {
+            var url = "https://stock.sina.com.cn/stock/api/openapi.php/TouziService.getStockRank?p=" + p + "&num=6&orderby=zl_sub&ordertype=desc";
+            api.ajax({
+                url: url,
+                method: 'get'
+            }, function(ret, err) {
+                if (ret) {
+                    if (ret.result.msg == "success") {
+                        p++;
+                        var data = ret.result.data.data;
+                        if (data.length > 0) {
+                            var pParam = new Object();
+                            pParam.stockcode = "";
+                            for (var i in data) {
+                                pParam.stockcode = pParam.stockcode + data[i].symbol.replace("sh", "").replace("sz", "") + ",";
+                            }
+                            sendPost(ServicesConifg.Quotation.StocksInfo, pParam,
+                                function(succ) {
+                                    for (var i in succ) {
+                                        if (succ[i].NewPrice.toFixed(2) == 0.00) {
+                                            succ[i].NewPrice = succ[i].YesterdayCollect;
+                                        }
+                                    }
+                                    document.getElementById("hotSearch").innerHTML = template("templateStock", {
+                                        List: succ
+                                    });
+                                },
+                                function(err) {
+                                    showToast("行情服务器异常");
+                                }, false, true
+                            );
+                        }
+                    }
+                } else {}
+            });
+
+        };
+
+        var searchStock = function(key) {
+            var url = "http://suggest3.sinajs.cn/suggest/type=11&name=abc&key=";
+            $api.get(url + key.toLowerCase(), function(succ) {
+                var data = succ.replace("var abc=", "");
+                var stocks = data.split(';');
+                var pParam = new Object();
+                pParam.stockcode = "";
+
+                for (var i in stocks) {
+                    if (stocks[i] != undefined) {
+                        var str = stocks[i].split(',');
+                        if (str[2] != undefined) {
+                            pParam.stockcode = pParam.stockcode + str[2] + ",";
+                        }
+                    }
+                }
+                if (pParam.stockcode == "") {
+                    document.getElementById("searchResult").innerHTML = "";
+                    return;
+                }
+                sendPost(ServicesConifg.Quotation.StocksInfo, pParam,
+                    function(succ) {
+                        for (var i in succ) {
+                            if (succ[i].NewPrice.toFixed(2) == 0.00) {
+                                succ[i].NewPrice = succ[i].YesterdayCollect;
+                            }
+                        }
+                        document.getElementById("searchResult").innerHTML = template("templateSearch", {
+                            List: succ
+                        });
+                    },
+                    function(err) {
+                        showToast("行情服务器异常");
+                    }, false, true
+                );
+            }, 'text');
+        };
+
+        var selectStock = function(code) {
+            //加入历史记录，历史记录只保存6条数据
+            var data = $api.getStorage(hKey) || "[]";
+            data = $api.strToJson(data); //转换成对象
+            var _data = new Array();
+            _data.push(new StockInfo(code)); //加入新的
+            for (var i in data) {
+                if (i < 5 && data[i].StockCode != code) //最多加入5条以及剔除原来搜索过的
+                {
+                    _data.push(new StockInfo(data[i].StockCode, data[i].SearchTime)); //重新加入
+                }
+            }
+            var newStr = $api.jsonToStr(_data);
+            $api.setStorage(hKey, newStr); //重新加入保存
+            if (tradeType == "0") {
+                api.openWin({
+                    name: 'addStrategy',
+                    url: 'addStrategy.html',
+                    pageParam: {
+                        stockCode: code
+                    }
+                });
+            } else {
+                api.openWin({
+                    name: 'simulationTrade',
+                    url: 'simulationTrade.html',
+                    pageParam: {
+                        stockCode: code
+                    }
+                });
+            }
+        };
+        //添加自选股
+        var AddSelfStock = function(_code, _name) {
+            event.stopPropagation();
+            sendPost(ServicesConifg.SelfStocking.AddSelfStock, {
+                stockcode: _code,
+                stockname: _name
+            }, function(data) {
+                showToast("添加自选股成功");
+                api.sendEvent({
+                    name: 'GetSelfStock'
+                });
+            }, function(err) {
+                showToast(err);
+            })
+        }
+    </script>
+
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="templateStock">
+        {{each List as value}}
+        <li onclick="selectStock('{{value.StockCode}}')">
+            <span class="sea-his-name">{{value.StockName}}</span>
+            <span class="sea-his-dm">{{value.StockCode}}</span> {{if value.DifferentialPersent
+            < 0}} <span class="sea-his-sy green">{{fixd(value.NewPrice)}}</span>
+                <span class="green"><i class="i1">{{fixd(value.Differential)}}</i><i>{{fixd(value.DifferentialPersent)}}%</i></span> {{else}}
+                <span class="sea-his-sy red">{{fixd(value.NewPrice)}}</span>
+                <span class="red"><i class="i1">+{{fixd(value.Differential)}}</i><i>+{{fixd(value.DifferentialPersent)}}%</i></span> {{/if}}
+        </li>
+        {{/each}}
+    </script>
+    <script type="text/template" charset="utf-8" id="templateSearch">
+        {{each List as value}}
+        <li>
+            <a href="#" onclick="selectStock('{{value.StockCode}}')">
+              <span class="message-con" style="width:25%;">{{value.StockName}}<em class="message-con-sm">{{value.StockCode}}</em></span>
+              {{if value.DifferentialPersent < 0}}
+              <span class="sea-result-zf" style="width:45%;"><em class="green">{{fixd(value.NewPrice)}}</em><em class="green">{{fixd(value.DifferentialPersent)}}%</em></span>
+              {{else}}
+              <span class="sea-result-zf" style="width:45%;"><em class="red">{{fixd(value.NewPrice)}}</em><em class="red">{{fixd(value.DifferentialPersent)}}%</em></span>
+              {{/if}}
+              <span style="width:25%;"><i class="iconfont icon-jia" onclick="AddSelfStock('{{value.StockCode}}','{{value.StockName}}')"></i></span>
+            </a>
+        </li>
+        {{/each}}
+    </script>
+
+    <div class="search-form dis-s01">
+        <i class="iconfont icon-sousuo"></i>
+        <input id="frmSearch" type="text" class="search-text" placeholder="点击搜索股票" />
+        <span class="search-qx back">取消</span>
+    </div>
+    <div id="historyBox">
+        <div class="wcp-first-box">
+            <p class="sea-his-tit">历史记录</p>
+            <ul class="sea-his-box" id="historySearch">
+
+            </ul>
+        </div>
+
+        <div class="wcp-first-box">
+            <p class="sea-his-tit">热门股票
+                <a onclick="readHotSearch()" style="float: right;margin-right: 1rem;color: #999;">换一批</a>
+            </p>
+            <ul class="sea-his-box" id="hotSearch">
+
+            </ul>
+        </div>
+    </div>
+
+    <div class="wcp-first-box" id="searchBox" style="display:none">
+        <p class="sea-his-tit">搜索结果</p>
+        <ul class="message sea-result" id="searchResult">
+
+        </ul>
+    </div>
+
+    <script type="text/javascript" src="js/fastclick.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
+
+</body>
+
+</html>

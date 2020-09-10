@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>-</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet" />
+</head>
+
+<body>
+        <!-- top-up -->
+        <div class="wcp-second-box wcp-dl wcp-dl-border">
+            <dl>
+                <dt>止损价格</dt>
+                <dd>
+                  <p style="display:-webkit-box">
+                      <span class="pro-bg pro-symbol" data-for="i-uplimit" states="reduce">-</span>
+                      <input type="number" class="pro-bg pro-mum red" value="0" style="border:none" id="i-uplimit" step="0.01"></input>
+                      <span class="pro-bg pro-symbol" data-for="i-uplimit" states="plus">+</span><span class="color2">上涨<i class="red" id="i-ul-per"></i>发起平仓</span>
+                  </p>
+                </dd>
+            </dl>
+            <dl>
+                <dt>资金补充</dt>
+                <dd><input id="userGroomPhone" type="text" placeholder="请输入推荐人手机" /></dd>
+            </dl>
+        </div>
+
+        <div class="fill-btn"><button onclick="registerSubmit()" class="wcp-btn wcp-btn-pad03 wcp-btn-red">提交修改</button></div>
+</body>
+
+</html>
+<!--核心模块-->
+<script type="text/javascript" src="../script/api.js"></script>
+<script type="text/javascript" src="../script/app.js"></script>
+<script type="text/javascript" src="../js/jquery.min.js"></script>
+<script type="text/javascript" src="../js/fastclick.js"></script>
+<!--通用组件-->
+<script type="text/javascript" src="../js/main.js"></script>
+<!--通信组件-->
+<script type="text/javascript" src="../script/core-min.js"></script>
+<script type="text/javascript" src="../script/aes.js"></script>
+<script type="text/javascript" src="../script/secret.js"></script>
+<script type="text/javascript" src="script/cacheAjax.js"></script>
+
+<script type="text/javascript">
+    var loadId;
+    _apiready = function() {
+        document.documentElement.style.fontSize = "14px";
+          resizeEvt = 'orientationchange' in window ? 'orientationchange' : 'resize',
+          window.addEventListener(resizeEvt, function(){}, false);
+          document.addEventListener('DOMContentLoaded', function(){}, false);
+
+    };
+</script>

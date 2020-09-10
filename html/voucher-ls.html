@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>我的卡券</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        window.onload = function() {
+            template.helper("subStr", function(str) {
+                if (str.length > 12) {
+                    return str.substring(0, 12) + "..."
+                } else {
+                    return str;
+                }
+            });
+            var tabsSwiper = new Swiper('#tabs-container', {
+                speed: 500,
+                onSlideChangeStart: function() {
+                    $(".vou-tabs li.active").removeClass('active')
+                    $(".vou-tabs li").eq(tabsSwiper.activeIndex).addClass('active')
+                }
+            })
+            $(".vou-tabs li").on('touchstart mousedown', function(e) {
+                e.preventDefault()
+                $(".vou-tabs .active").removeClass('active')
+                $(this).addClass('active')
+                tabsSwiper.slideTo($(this).index())
+            })
+            $(".vou-tabs li").click(function(e) {
+                e.preventDefault()
+            });
+        }
+
+        _apiready = function() {
+            loadTicks();
+        };
+        var loadTicks = function() {
+            showLoading();
+            sendGet(ServicesConifg.Account.QueryTicket, function(succ) {
+                $api.dom("#unuse").innerHTML = succ.unUseList.length;
+                $api.dom("#use").innerHTML = succ.UseList.length;
+                $api.dom("#expire").innerHTML = succ.ExpireList.length;
+                $api.dom("#UnUseBox").innerHTML = template("template", {
+                    list: succ.unUseList
+                });
+                $api.dom("#UseBox").innerHTML = template("template", {
+                    list: succ.UseList
+                });
+                $api.dom("#ExpireBox").innerHTML = template("template", {
+                    list: succ.ExpireList
+                });
+                closeLoading();
+            }, function() {
+                closeLoading();
+            })
+        };
+    </script>
+
+</head>
+
+
+<body>
+
+    <script type="text/template" charset="utf-8" id="template">
+        {{each list as value}}
+        <li>
+            <div class="vou-mo">
+                <img src="../images/voucher.png" />
+                <div class="vou-money">
+                    <span class="vou-money-tit"><i>￥</i>{{value.Money}}</span>
+                    <span class="vou-money-sm">满{{value.LowMoney}}使用</span>
+                </div>
+            </div>
+            <span class="vou-tit">{{subStr(value.Name)}}</span>
+            <span class="vou-time">{{value.AddTime}}-{{value.EndTime}}</span>
+            <span class="vou-sm">{{if value.Type==0}}信用金抵用券{{else if value.Type==1}}延期手续费抵用券{{else}}信息服务费抵用券{{/if}}-{{value.Status}}</span> {{if value.Status=="已使用"}}
+            <p class="vou-zt vou-ysy"></p>
+            {{else if value.Status=="已过期"}}
+            <p class="vou-zt vou-ygq"></p>
+            {{/if}}
+        </li>
+        {{/each}}
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            我的卡券
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container">
+        <!-- tab -->
+        <div class="vou-tabs">
+            <ul>
+                <li class="active"><a href="#">未使用(<span id="unuse">0</span>)</a></li>
+                <li><a href="#">已使用(<span id="use">0</span>)</a> </li>
+                <li><a href="#">已过期(<span id="expire">0</span>)</a> </li>
+            </ul>
+        </div>
+        <div id="tabs-container" class="swiper-container">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <ul class="vou-con" id="UnUseBox">
+
+                    </ul>
+                </div>
+                <div class="swiper-slide">
+                    <ul class="vou-con" id="UseBox">
+
+                    </ul>
+                </div>
+                <div class="swiper-slide">
+                    <ul class="vou-con" id="ExpireBox">
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>-</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet" />
+    <link href="../css/layer.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/layer.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <script type="text/javascript" src="../js/async.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../script/enum.js"></script>
+    <script type="text/javascript">
+        var config;
+        var scroller;
+        _apiready = function() {
+            template.helper("fixd", function(dec) {
+                if (dec != null)
+                    return dec.toFixed(2);
+                else
+                    return "0.00";
+            });
+            template.helper("DateFormat", function(jsondate) {
+                if (jsondate != null) {
+                    return jsondate.replace('T', ' ').substring(5, 16);
+                } else {
+                    return "";
+                }
+            });
+            api.addEventListener({
+                name: 'loginBack'
+            }, function(ret, err) {
+                loadPageData(function() {});
+            });
+            api.addEventListener({
+                name: 'reloadStrategy'
+            }, function(ret, err) {
+                setTimeout(function() {
+                    loadPageData(function() {});
+                }, 1000);
+            });
+            var accessToken = getUserAccess();
+            if (accessToken) {
+                loadPageData(function() {});
+            }
+            scroller = new JRoll("#wrapper");
+            scroller.pulldown({
+                refresh: function(complete) {
+                    loadPageData(function() {
+                        complete();
+                    });
+                }
+            });
+
+            QueryConfig(function(_config) {
+                config = _config[0];
+            });
+        };
+        var loadPageData = function(complete) {
+            async.parallel([
+                function(done) {
+                    QueryUserInfo(function(data) {
+                        refreshMoney();
+                        done(null, 1);
+                    });
+                },
+                function(done) {
+                    queryStrategy(function() {
+                        done(null, 2);
+                    });
+                }
+            ], function(err, result) {
+                if (result.length == 2) {
+                    complete();
+                    scroller.refresh();
+                } else {
+                    showToast("刷新失败");
+                    complete();
+                }
+            });
+        };
+        var goHistory = function() {
+            api.openWin({
+                name: 'historyPosition',
+                url: 'historyPosition.html',
+                pageParam: {
+                    type: "0"
+                }
+            });
+
+        };
+        var queryStrategy = function(end) {
+            sendGet(ServicesConifg.Position.QueryPosition,
+                function(succ) {
+                    var data = {
+                        List: succ
+                    };
+                    document.getElementById("AStrategy").innerHTML = template("temPosition", data);
+                    $.each(data.List, function(i, e) {
+                        if (e.Status == "已创建") {
+                            setTimeout(function() {
+                                queryStrategy();
+                            }, 5000);
+                            return false;
+                        }
+                    });
+                    loadNewPrice(succ);
+                    /*隐藏显示*/
+                    $(".stra-cc").click(function() {
+                        $(this).find(".stra-cc-btn").toggleClass("icon-rotate-copy");
+                        $(this).parents(".wcp-second-box").children(".stra-cc-box").toggle();
+                        scroller.refresh();
+                    });
+                    if (end) {
+                        end();
+                    }
+                },
+                function(err) {
+                    showToast(err);
+                    if (end) {
+                        end();
+                    }
+                });
+        };
+        var search = function() {
+            api.openWin({
+                name: 'search',
+                url: 'search.html'
+            });
+        };
+
+
+        //充值
+        function goRecharge() {
+            api.openWin({
+                name: 'recharge',
+                url: 'recharge.html'
+            });
+        }
+
+        //模拟策略
+        function gosimulationList() {
+            api.openWin({
+                name: 'simulationList',
+                url: 'simulationList.html'
+            });
+        }
+
+        //查看行情
+        function gomarket(code, StrategyId) {
+            api.openWin({
+                name: 'market',
+                url: 'market.html',
+                pageParam: {
+                    stockCode: code,
+                    strategyId: StrategyId,
+                    Type: 0
+                }
+            });
+        }
+
+        //查询用户信息并缓存
+        function QueryUserInfo(end) {
+            sendGet(ServicesConifg.Account.QueryUserInfo,
+                function(succ) {
+                    saveUserInfo(succ);
+                    if (end)
+                        end(succ);
+                },
+                function(err) {
+                    showToast(err);
+                    if (end)
+                        end();
+                }
+            );
+        }
+
+        var refreshMoney = function() {
+            var userInfo = getUserInfo();
+            if (userInfo) {
+                $("#myAccount").html(template("template", userInfo));
+            }
+        };
+
+        var saleStrategy = function(StrategyCode) {
+            var $strategy = $("#" + StrategyCode);
+            var StockName = $strategy.attr("StockName");
+            var StockCode = $strategy.attr("StockCode");
+            var dialog = api.require("dialogBox");
+            dialog.alert({
+                texts: {
+                    title: '卖出策略',
+                    content: '是否要卖出策略[' + StockName + '(' + StockCode + ')]',
+                    leftBtnTitle: '取消',
+                    rightBtnTitle: '马上卖出'
+                },
+                styles: {
+                    bg: '#fff',
+                    w: 300,
+                    title: {
+                        marginT: 20,
+                        iconSize: 40,
+                        titleSize: 14,
+                        titleColor: '#000'
+                    },
+                    content: {
+                        color: '#000',
+                        size: 14
+                    },
+                    left: {
+                        marginB: 7,
+                        marginL: 20,
+                        w: 130,
+                        h: 35,
+                        corner: 2,
+                        bg: '#fff',
+                        size: 12
+                    },
+                    right: {
+                        marginB: 7,
+                        marginL: 10,
+                        w: 130,
+                        h: 35,
+                        corner: 2,
+                        bg: '#fff',
+                        size: 12
+                    }
+                }
+            }, function(ret) {
+                if (ret.eventType == 'left') {
+                    dialog.close({
+                        dialogName: 'alert'
+                    });
+                } else if (ret.eventType == 'right') {
+                    _submit(StrategyCode, StockCode);
+                    dialog.close({
+                        dialogName: 'alert'
+                    });
+                }
+            });
+
+        };
+
+        var _submit = function(code, stockCode) {
+            showLoading("提交策略中...");
+            var param = {
+                StockCode: stockCode,
+                Direction: EntrustDirection.Sell,
+                TradeType: TradeType.HandTrade,
+                StrategyType: StrategyType.FrimTrade,
+                StrategyCode: code
+            };
+
+            sendPost(ServicesConifg.Trader.SendEntrust, param,
+                function(succ) {
+                    closeLoading();
+                    showToast("提交成功");
+                    loadPageData(function() {});
+                },
+                function(err) {
+                    closeLoading();
+                    showToast(err);
+                }
+            );
+        };
+
+        var changeWinGain = function(price, number, StrategyCode) {
+            var content = $("#changeWinGain").html();
+            content = template("changeWinGain", {
+                price: price.toFixed(2),
+                number: number,
+                strategyCode: StrategyCode
+            });
+            layer.open({
+                title: [
+                    '修改止盈价',
+                    'background-color: #FF4351; color:#fff;height:40px; line-height:40px;'
+                ],
+                btn: ['提交', '关闭'],
+                content: content,
+                yes: function(index) {
+                    var winPrice = $("#zyprice").val();
+                    showLoading("修改中...");
+                    sendPost(ServicesConifg.Position.UpdateGainLoPrice, {
+                        StrategyCode: StrategyCode,
+                        Price: winPrice,
+                        UpdatePositionType: 1
+                    }, function(succ) {
+                        showToast("修改成功");
+                        closeLoading();
+                        loadPageData(function() {});
+                    }, function(err) {
+                        showToast(err);
+                        closeLoading();
+                    });
+
+                    layer.close(index);
+                }
+            });
+        };
+
+        var changeLossGain = function(price, number, StrategyCode, minPrice) {
+            var content = $("#changeLossGain").html();
+            content = template("changeLossGain", {
+                price: price.toFixed(2),
+                number: number,
+                minPrice: minPrice.toFixed(2),
+                strategyCode: StrategyCode
+            });
+            layer.open({
+                title: [
+                    '修改止损价',
+                    'background-color: #FF4351; color:#fff;height:40px; line-height:40px;'
+                ],
+                btn: ['提交', '关闭'],
+                content: content,
+                yes: function(index) {
+                    var lossPrice = $("#zsprice").val();
+                    var bcxyj = $("#bcxyj").val();
+                    if (lossPrice == 0) {
+                        showLoading("止损价不能为零");
+                        return false;
+                    }
+                    showLoading("修改中...");
+                    sendPost(ServicesConifg.Position.UpdateGainLoPrice, {
+                        StrategyCode: StrategyCode,
+                        Price: lossPrice,
+                        Money: bcxyj,
+                        UpdatePositionType: 0
+                    }, function(succ) {
+                        showToast("修改成功");
+                        closeLoading();
+                        loadPageData(function() {});
+                    }, function(err) {
+                        showToast(err);
+                        closeLoading();
+                    });
+
+                    layer.close(index);
+                }
+            });
+        };
+
+        function QueryConfig(end) {
+            sendGet(ServicesConifg.SysConfig.QuerySysConfig,
+                function(succ) {
+                    end(succ);
+                },
+                function(err) {
+                    showToast("加载服务器配置失败");
+                }
+            );
+        };
+
+        var changePrice = function(code, minPrice) {
+            //$("#zsprice").val(parseFloat($("#zsprice").val()).toFixed(2));
+            var lossPrice = parseFloat($("#zsprice").attr("data-loss")); //原来的止损价
+            var value = parseFloat($("#zsprice").val()); //新止损价
+            var StockNum = $("#" + code).attr("StockNum");
+            var Money = parseInt($("#" + code).attr("Money"));
+            if (lossPrice > value && value < minPrice) {
+                var stockPrice = parseFloat($("#" + code).attr("StockPrice")); //成本价格
+                var lastMoney = parseInt(StockNum) * (stockPrice - value) / config.LossScale;
+                if (lastMoney - Money > 0) {
+                    $("#bcxyj").val((lastMoney - Money).toFixed(0));
+                } else {
+                    $("#bcxyj").val(0);
+                }
+            } else {
+                $("#bcxyj").val(0);
+            }
+        };
+
+        var loadNewPrice = function(_data) {
+            var pParam = new Object();
+            pParam.stockcode = "";
+            for (var i in _data) {
+                pParam.stockcode = pParam.stockcode + _data[i].StockCode + ",";
+            }
+            if (pParam.stockcode == "") {
+                return false;
+            }
+            sendPost(ServicesConifg.Quotation.StocksInfo, pParam,
+                function(succ) {
+                    var MarkValue = 0;
+                    var GainValue = 0;
+                    for (var i in succ) {
+                        if (succ[i].NewPrice.toFixed(2) == 0.00) {
+                            succ[i].NewPrice = succ[i].YesterdayCollect;
+                        }
+                        $(".wcp-second-box[StockCode=" + succ[i].StockCode + "]").each(function(idx, e) {
+                            var Status = $(e).attr("Status"); //策略状态
+                            var $newPrice = $(e).find("span[data-for=newPrice]");
+                            var $rangeMoney = $(e).find("span[data-for=rangeMoney]");
+
+                            if (succ[i].DifferentialPersent > 0) {
+                                $newPrice.addClass("red");
+                                $rangeMoney.addClass("red");
+                            } else if (succ[i].DifferentialPersent < 0) {
+                                $newPrice.addClass("green");
+                                $rangeMoney.addClass("green");
+                            }
+                            $newPrice.html(succ[i].NewPrice.toFixed(2));
+                            $rangeMoney.html(succ[i].DifferentialPersent.toFixed(2) + "%");
+                            if (Status == "策略执行中") {
+                                var GainPrice = parseFloat($(e).attr("GainPrice")) || 0.0;
+                                var LossPrice = parseFloat($(e).attr("LossPrice")) || 0.0;
+                                var BuyPrice = parseFloat($(e).attr("BuyPrice")) || 0.0;
+                                var StockNum = parseInt($(e).attr("StockNum")) || 0;
+                                MarkValue += StockNum * succ[i].NewPrice;
+                                var $gainMoney = $(e).find("span[data-for=gainMoney]"); //浮动盈亏
+                                var $stopProfit = $(e).find("i[data-for=stopProfit]"); //止盈浮动
+                                var $stopLoss = $(e).find("i[data-for=stopLoss]"); //止损浮动
+                                //$stopProfit.html(((GainPrice - succ[i].NewPrice) / succ[i].NewPrice * 100).toFixed(2) + "%");
+                                //$stopLoss.html(Math.abs((LossPrice - succ[i].NewPrice) / succ[i].NewPrice * 100).toFixed(2) + "%");
+                                var _gain = (succ[i].NewPrice - BuyPrice) * StockNum;
+                                if (_gain > 0) {
+                                    $gainMoney.addClass("red");
+                                } else if (_gain < 0) {
+                                    $gainMoney.addClass("green");
+                                }
+                                $gainMoney.html(_gain.toFixed(2));
+                                GainValue += _gain;
+
+                                var $realityGainMoney = $(e).find("span[data-for=realityGainMoney]"); //实际盈亏
+                                var StockPrice = parseFloat($(e).attr("StockPrice")) || 0.0;
+                                var PositionFee = parseFloat($(e).attr("PositionFee")) || 0.0;
+                                var _realitygain = (succ[i].NewPrice - StockPrice) * StockNum - PositionFee;
+                                if (_realitygain > 0) {
+                                    $realityGainMoney.addClass("red");
+                                } else if (_realitygain < 0) {
+                                    $realityGainMoney.addClass("green");
+                                }
+                                $realityGainMoney.html(_realitygain.toFixed(2));
+                            }
+                        });
+                    }
+                    $("#positionValues").html(MarkValue.toFixed(2));
+                    $("#positionProLose").html(GainValue.toFixed(2));
+                    $("#userMoney").html((GainValue + parseFloat($("#userMoney").html())).toFixed(2));
+                    if (GainValue > 0) {
+                        $("#positionProLose").addClass("red");
+                    } else if (GainValue < 0) {
+                        $("#positionProLose").addClass("green");
+                    }
+                },
+                function(err) {
+                    showToast("行情服务器异常");
+                }, false, true
+            );
+        };
+
+        function delayDay(StrategyCode, day) {
+            var dialogBox = api.require("dialogBox");
+            dialogBox.confirm({
+                tapClose: true,
+                msg: {
+                    content: '是否要申请延迟平仓日',
+                    leftBtnTitle: '取消',
+                    rightBtnTitle: '确定'
+                },
+                styles: {
+                    bg: '#fff',
+                    maskBg: 'rgba(0,0,0,0.5)',
+                    msg: {
+                        color: '#000000',
+                        size: 20,
+                        maginLR: 10,
+                        maginT: 15
+                    },
+                    leftBtn: {
+                        color: '#000',
+                        highlightBg: 'rgba(255,0,0,0.5)',
+                        size: 16
+                    },
+                    rightBtn: {
+                        bg: 'rgb(255,0,0)',
+                        highlightBg: 'rgba(255,0,0,0.5)',
+                        color: '#FFF',
+                        size: 16
+                    }
+                }
+            }, function(ret) {
+                if (ret.eventType == "ok") {
+                    showLoading("修改中...");
+                    sendPost(ServicesConifg.Position.UpdateIsDelay, {
+                        strategyCode: StrategyCode
+                    }, function(succ) {
+                        closeLoading();
+                        showToast("已申请延期");
+                        loadPageData(function() {});
+                    }, function(err) {
+                        closeLoading();
+                        showToast(err);
+                    });
+                    dialogBox.close({
+                        dialogName: 'confirm'
+                    });
+                } else {
+                    closeLoading();
+                    dialogBox.close({
+                        dialogName: 'confirm'
+                    });
+                }
+            });
+
+        };
+    </script>
+    <style type="text/css">
+        .stra-wait {
+            display: -webkit-box;
+        }
+
+        .stra-wait ul {
+            -webkit-box-flex: 1;
+        }
+
+        .stra-wait ul li {
+            display: block;
+        }
+
+        .stra-wait .stra-status {
+            font-size: 16px;
+            color: red;
+            line-height: 60px;
+            padding-left: 50px;
+            padding-right: 50px;
+        }
+
+        .floatButton {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            font-size: 30px;
+            color: #fff;
+            right: 20px;
+            bottom: 60px;
+            z-index: 999;
+            border-radius: 20px;
+            background: rgb(255, 162, 0);
+            text-align: center;
+            line-height: 40px;
+            display: none;
+        }
+
+        a.floatButton:active {
+            background-color: #feba44;
+        }
+
+        .layui-m-layercont {
+            padding: 20px !important;
+            text-align: left;
+        }
+
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding-bottom: 3rem;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="changeLossGain">
+        <!-- 止盈止损 -->
+        <div class="trade-profit">
+            <p><span style="color:gray; font-size:11px;">原止损价：{{price}}</span></p>
+            <p>
+                止损价格：
+                <input type="number" oninput="changePrice('{{strategyCode}}',{{minPrice}})" data-number="{{number}}" data-loss="{{price}}" id="zsprice" class="pro-bg pro-mum red" value="{{price}}" style="border:none" step="0.01"></input>
+            </p>
+            <p>
+                补充资金：
+                <input type="number" id="bcxyj" class="pro-bg pro-mum red" value="0" style="border:none"></input>
+            </p>
+        </div>
+    </script>
+    <script type="text/template" charset="utf-8" id="changeWinGain">
+        <!-- 止盈止损 -->
+        <div class="trade-profit">
+            <p><span style="color:gray; font-size:11px;">原止盈价：{{price}}</span></p>
+            <p>
+                止盈价格：
+                <input type="number" id="zyprice" class="pro-bg pro-mum red" value="{{price}}" style="border:none" step="0.01"></input>
+            </p>
+        </div>
+    </script>
+    <a class="floatButton" href="javascript:search()" draggable="true">+</a>
+    <script type="text/template" id="template">
+        <h3 class="list-tit">我的资产<a href="#"><button class="wcp-btn wcp-btn-opcity" id="btnRecharge" onclick="goRecharge()">马上充值</button></a></h3>
+        <ul class="stra-ass">
+            <li>总资产<span class="orange" id="userMoney">{{Money}}</span></li>
+            <li>昨日收益<span class="{{if PreGain>0}}red{{else if PreGain < 0}}green{{else}}black{{/if}}">
+            {{if PreGain>0}}+{{/if}}{{PreGain}}
+          </span></li>
+        </ul>
+        <ul class="stra-assets">
+            <li><i class="i1"></i>持仓市值：<span class="color1" id="positionValues">0</span></li>
+            <li><i class="i2"></i>持仓盈亏：<span class="" id="positionProLose">0</span></li>
+            <li><i class="i3"></i>可用资金：<span class="color1" id="userBalance">{{Balance}}</span></li>
+            <li><i class="i4"></i>冻结资产：<span class="color1" id="userFrozenMoney">{{FrozenMoney}}</span></li>
+        </ul>
+    </script>
+
+    <script type="text/template" charset="utf-8" id="temPosition">
+        {{each List as value}}
+        <li id="{{value.StrategyCode}}" class="wcp-second-box" Money="{{value.Money}}" StockCode="{{value.StockCode}}" StockName="{{value.StockName}}" StockNum="{{value.StockNum}}" GainPrice="{{value.GainPrice}}" LossPrice="{{value.LossPrice}}" Status="{{value.Status}}"
+            StockPrice="{{value.StockPrice}}" BuyPrice="{{value.BuyPrice}}" PositionFee="{{value.PositionFee}}">
+            <div class="stra-cc">
+                {{if value.Status=="策略执行中"}}
+                <ul>
+                    <li class="stra-cc-tit" onclick="gomarket('{{value.StockCode}}','{{value.Id}}')">
+                        <span style="color:#f7900f; padding: 0rem .3rem;margin-right: .3rem;">{{if value.TradeModel==0}}T1{{else}}TN{{/if}}</span>
+                        <span>{{value.StockName}}</span>
+                        <i>{{value.StockCode}}</i>
+                    </li>
+                    <li onclick="gomarket('{{value.StockCode}}','{{value.Id}}')">
+                        <span class="" data-for="newPrice">0</span>
+                        <span class="stra-cc-jg" data-for="rangeMoney">0.0</span>
+                    </li>
+                    <li>买入价：<span class="color1">{{fixd(value.BuyPrice)}}</span></li>
+                    <li>成本价：<span class="color1">{{fixd(value.StockPrice)}}</span></li>
+                    <li>浮盈：<span class="" data-for="gainMoney">0</span></li>
+                    <li>盈亏：<span class="" data-for="realityGainMoney">0</span></li>
+                    {{if value.TradeModel==0}} {{if value.IsDelay}}
+                    <li class="stra-cc-cz">已持仓{{value.Day}}天,下交易日平仓</li>
+                    {{else}} {{if value.Day > 0}}
+                    <li class="stra-cc-cz">今日14:50平仓</li>
+                    {{else}}
+                    <li class="stra-cc-cz">下交易日14:50平仓</li>
+                    {{/if}} {{/if}} {{else}}
+                    <li class="stra-cc-cz">已持仓{{value.Day}}天</li>
+                    {{/if}}
+                    <li class="stra-cc-cz">买入时间：<span class="">{{DateFormat(value.BuyTime)}}</span></li>
+                </ul>
+                <i class="iconfont icon-arrow-copy stra-cc-btn"></i> {{else}}
+                <div class="stra-wait">
+                    <ul>
+                        <li class="stra-cc-tit">
+                            <span style="font-size:16px;">{{value.StockName}}</span>
+                            <i>{{value.StockCode}}</i>
+                        </li>
+                        <li style="font-size:16px;">
+                            <span class="" data-for="newPrice">0</span><br/>
+                            <span class=" stra-cc-jg" data-for="rangeMoney">0.0</span>
+                        </li>
+                    </ul>
+                    <div class="stra-status">
+                        策略挂单中··· ···
+                    </div>
+                </div>
+                {{/if}}
+            </div>
+            <div class="stra-cc-box">
+                <ul>
+                    <li class="w1">信用金<span class="orange">{{value.Money}}</span></li>
+                    <li class="w1">止盈价<span class="red">{{value.GainPrice}}</span></li>
+                    <li class="w2">上涨<i class="red" data-for="stopProfit">{{fixd((value.GainPrice-value.BuyPrice)/value.BuyPrice*100)}}%</i>触发止盈</li>
+                    <li class="w1">股票数<span class="orange">{{value.StockNum}}</span></li>
+                    <li class="w1">止损价<span class="green">{{value.LossPrice}}</span></li>
+                    <li class="w2">下跌<i class="green" data-for="stopLoss">{{fixd((value.BuyPrice-value.LossPrice)/value.BuyPrice*100)}}%</i>触发止损</li>
+                    <li style="width:30%;">交易手续费<span class="orange">{{fixd(value.BuyFee)}}</span></li>
+                    <li style="width:30%;">管理费<span class="orange">{{fixd(value.PositionFee)}}</span></li>
+                    <li style="width:40%;">强平价<span class="orange">{{fixd(value.ForceMoney)}}</span></li>
+                </ul>
+                <p>
+                    <a href="#" onclick="changeWinGain({{value.GainPrice}},{{value.StockNum}},'{{value.StrategyCode}}')"><button class="wcp-btn wcp-btn-pad01 wcp-btn-orange">修改止盈</button></a>
+                    <a href="#" onclick="changeLossGain({{value.LossPrice}},{{value.StockNum}},'{{value.StrategyCode}}',{{value.ForceMoney}})"><button class="wcp-btn wcp-btn-pad01 wcp-btn-orange">修改止损</button></a> {{if value.TradeModel==0}} {{if value.IsDelay
+                    == false}}
+                    <a href="#"><button class="wcp-btn wcp-btn-pad01 wcp-btn-green" onclick="delayDay('{{value.StrategyCode}}',{{value.Day}})">延迟平仓日</button></a> {{/if}} {{/if}} {{if value.Day > 0}}
+                    <a href="#" onclick="saleStrategy('{{value.StrategyCode}}')"><button class="wcp-btn wcp-btn-pad01 wcp-btn-red">卖出</button></a> {{/if}}
+                </p>
+            </div>
+        </li>
+        {{/each}}
+    </script>
+    <!-- 搜索 -->
+    <form id="searchbox">
+        <div class="search-form-cl">
+            <i class="iconfont icon-sousuo"></i>
+            <input type="text" class="search-text" placeholder="点击搜索股票" onclick="search()" readonly="readonly" />
+        </div>
+    </form>
+    <div id="wrapper">
+        <div id="scroller">
+
+            <!-- tab -->
+            <!-- <div class="tabs">
+                <ul>
+                    <li class="active"><a href="#">A股策略</a></li>
+                    <li><a href="#" onclick="gosimulationList()">模拟策略</a> </li>
+                </ul>
+            </div> -->
+            <div id="tabs-container" class="swiper-container">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <!-- 我的资产 -->
+                        <div class="wcp-second-box dis-top" id="myAccount">
+
+                        </div>
+                        <!-- 策略持仓 -->
+                        <div class="wcp-second-box">
+                            <h3 class="list-tit"><a href="#" onclick="goHistory()">策略持仓<span>历史记录</span><i class="iconfont icon-icon"></i></a></h3>
+                        </div>
+                        <!-- 按钮 -->
+                        <div id="create" class="fill-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-opcity" onclick="search()">创建策略</button></div>
+                        <ol id="AStrategy">
+
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

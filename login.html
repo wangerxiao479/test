@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>登录微操盘</title>
+    <link href="css/common.css" type="text/css" rel="stylesheet">
+    <link href="fontico/iconfont.css" rel="stylesheet" type="text/css">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="script/api.js"></script>
+    <script type="text/javascript" src="script/app.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="js/main.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="script/core-min.js"></script>
+    <script type="text/javascript" src="script/aes.js"></script>
+    <script type="text/javascript" src="script/secret.js"></script>
+    <script type="text/javascript" src="script/cacheAjax.js"></script>
+
+    <script type="text/javascript">
+        _apiready = function() {
+            //$api.fixStatusBar( $api.dom('header') );//发布正式版本后去除
+            api.setStatusBarStyle({
+                style: 'light',
+                color: "#f40303"
+            });
+
+            var from = api.pageParam.from;
+            if (from) {
+                api.closeWin({
+                    name: from
+                });
+            }
+        };
+
+        var preLogin = function() {
+            var userPhone = $api.dom("#userPhone").value;
+            if (userPhone.CheckRegexp(/^[1][0-9][0-9]{9}$/)) {
+                showLoading();
+                sendPost(ServicesConifg.Account.QueryPreLogin, {
+                        userPhone: userPhone
+                    },
+                    function(data) {
+                        closeLoading();
+                        api.openWin({
+                            name: 'loginOn',
+                            url: './loginOn.html',
+                            pageParam: {
+                                userPhone: userPhone,
+                                userHeader: data.userHeader
+                            }
+                        });
+                    },
+                    function(err) {
+                        closeLoading();
+                        var errs = err.split(':');
+                        if (errs[0].toString() == "unregister") {
+                            api.openWin({
+                                name: 'registerOn',
+                                url: './registerOn.html',
+                                pageParam: {
+                                    userPhone: userPhone
+                                }
+                            });
+                        } else {
+                            showToast(err);
+                        }
+                    }
+
+                );
+            }
+            else {
+              showToast("请输入正确的手机号码");
+            }
+        };
+    </script>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="javascript:history.back(-1);" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            注册登录
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container">
+        <!-- con -->
+        <div class="wcp-second-box wcp-dl">
+            <dl>
+                <dt>手机号码</dt>
+                <dd><input id="userPhone" type="text" placeholder="请输入手机号码" /></dd>
+            </dl>
+        </div>
+
+        <a href="#">
+            <div class="fill-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-red" onclick="preLogin()">下一步</button></div>
+        </a>
+    </div>
+</body>
+
+</html>

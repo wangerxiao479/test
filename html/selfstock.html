@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>自选股</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet" />
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="../css/index.css" type="text/css" rel="stylesheet" />
+    <link href="../css/style.css" type="text/css" rel="stylesheet" />
+    <link href="../css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../script/stick.js"></script>
+    <style>
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding-bottom: 3rem;
+        }
+    </style>
+    <script type="text/javascript">
+        _apiready = function() {
+            var swiper = new Swiper('.swiper-container', {
+                pagination: '.swiper-pagination',
+                paginationClickable: true,
+                autoplay: 5000,
+                loop: true,
+            });
+            // 排序
+            $(".sort-ud").click(function() {
+                if ($(this).hasClass("sort-down")) {
+                    $(this).removeClass("sort-down").addClass("sort-up")
+                } else {
+                    $(this).removeClass("sort-up").addClass("sort-down")
+                }
+            });
+            var scroller = new JRoll("#wrapper");
+            scroller.pulldown({
+                refresh: function(complete) {
+                    $(".stock-list-tit .sort-ud").removeClass("sort-up");
+                    $(".stock-list-tit .sort-ud").removeClass("sort-down");
+                    GetSelfStock(function() {
+                        complete();
+                        scroller.refresh();
+                    });
+                }
+            });
+            GetZhiShu();
+            GetSelfStock(function() {
+                scroller.refresh();
+            });
+
+            api.addEventListener({
+                name: 'GetSelfStock'
+            }, function(ret, err) {
+                GetSelfStock(function() {
+                    scroller.refresh();
+                });
+            });
+        };
+
+        function GetSelfStock(end) {
+            sendGet(ServicesConifg.SelfStocking.QuerySelfStocks, function(data) {
+                $("#stocklist").html(template("stocklistTemplate", {
+                    List: data
+                }));
+                //获取行情
+                var code = "";
+                $(data).each(function(i, e) {
+                    code += e.stock_code + ",";
+                });
+                StocksInfo(code);
+                //排序
+                $(".stock-list-tit .sort-ud").click(function() {
+                    if ($(this).index() == 1) {
+                        if ($(this).hasClass("sort-up")) {
+                            $(".stock-list-tit .sort-ud").removeClass("sort-up");
+                            $(".stock-list-tit .sort-ud").removeClass("sort-down");
+                            $(this).addClass("sort-up");
+                            var stocklist = $("#stocklist li").sort(sortPrice);
+                            $("#stocklist").html(stocklist);
+                        } else {
+                            $(".stock-list-tit .sort-ud").removeClass("sort-up");
+                            $(".stock-list-tit .sort-ud").removeClass("sort-down");
+                            $(this).addClass("sort-down");
+                            var stocklist = $("#stocklist li").sort(sortPriceDesc);
+                            $("#stocklist").html(stocklist);
+                        }
+                    } else {
+                        if ($(this).hasClass("sort-up")) {
+                            $(".stock-list-tit .sort-ud").removeClass("sort-up");
+                            $(".stock-list-tit .sort-ud").removeClass("sort-down");
+                            $(this).addClass("sort-up");
+                            var stocklist = $("#stocklist li").sort(sortGains);
+                            $("#stocklist").html(stocklist);
+                        } else {
+                            $(".stock-list-tit .sort-ud").removeClass("sort-up");
+                            $(".stock-list-tit .sort-ud").removeClass("sort-down");
+                            $(this).addClass("sort-down");
+                            var stocklist = $("#stocklist li").sort(sortGainsDesc);
+                            $("#stocklist").html(stocklist);
+                        }
+                    }
+                });
+                if (end) {
+                    end();
+                }
+            }, function(err) {
+                showToast(err);
+                if (end) {
+                    end();
+                }
+            });
+        }
+
+        function sortPrice(a, b) {
+            return $(a).find(".stock-list-price").html() - $(b).find(".stock-list-price").html()
+        }
+
+        function sortGains(a, b) {
+            return $(a).find(".stock-list-gains").html().replace("%", "") - $(b).find(".stock-list-gains").html().replace("%", "")
+        }
+
+        function sortPriceDesc(a, b) {
+            return $(b).find(".stock-list-price").html() - $(a).find(".stock-list-price").html()
+        }
+
+        function sortGainsDesc(a, b) {
+            return $(b).find(".stock-list-gains").html().replace("%", "") - $(a).find(".stock-list-gains").html().replace("%", "")
+        }
+
+        function StocksInfo(code) {
+            var param = {
+                "stockcode": code
+            };
+            sendPost(ServicesConifg.Quotation.StocksInfo, param,
+                function(data) {
+                    var stocklist = $("#stocklist li");
+                    $(data).each(function(i, e) {
+                        e.NewPrice = e.NewPrice == 0 ? e.YesterdayCollect : e.NewPrice;
+                        var stockli = stocklist.filter(function(x) {
+                            return $(stocklist[x]).attr("code") == e.StockCode;
+                        });
+
+                        if (e.DifferentialPersent > 0) {
+                            $(stockli[0]).find(".stock-list-price").removeClass("green");
+                            $(stockli[0]).find(".stock-list-price").addClass("red");
+
+                            $(stockli[0]).find(".stock-list-gains").removeClass("bg-gray");
+                            $(stockli[0]).find(".stock-list-gains").removeClass("bg-green");
+                            $(stockli[0]).find(".stock-list-gains").addClass("bg-red");
+
+                        } else if (e.DifferentialPersent < 0) {
+                            $(stockli[0]).find(".stock-list-price").removeClass("red");
+                            $(stockli[0]).find(".stock-list-price").addClass("green");
+
+                            $(stockli[0]).find(".stock-list-gains").removeClass("bg-gray");
+                            $(stockli[0]).find(".stock-list-gains").removeClass("bg-red");
+                            $(stockli[0]).find(".stock-list-gains").addClass("bg-green");
+                        }
+                        $(stockli[0]).find(".stock-list-price").html(e.NewPrice);
+                        $(stockli[0]).find(".stock-list-gains").html(e.DifferentialPersent + "%");
+                    });
+                    setTimeout(function() {
+                        StocksInfo(code);
+                    }, 3000);
+                },
+                function(err) {
+                    showToast("行情服务器异常");
+                    closeLoading();
+                }, false, true
+            );
+        }
+
+        function GetZhiShu() {
+            api.ajax({
+                url: "http://api.quchaogu.com/app/stock/zhishu?from=dxw",
+                method: "get",
+                timeout: 10
+            }, function(data) {
+                var obj = data;
+                var list = $("#zhishulist li");
+                if (obj.code == 10000) {
+                    $(obj.data.zs_list).each(function(i, e) {
+                        $(list).each(function(ii, ee) {
+                            var spans = $(ee).find("span");
+                            if ($(spans[0]).html() == e.name) {
+                                if (e.price_change > 0) {
+                                    $(spans[1]).removeClass("green")
+                                    $(spans[1]).addClass("red")
+                                } else if (e.price_change < 0) {
+                                    $(spans[1]).removeClass("red")
+                                    $(spans[1]).addClass("green")
+                                }
+                                $(spans[1]).html(e.price);
+                                if (e.price_change > 0) {
+                                    $(spans[2]).find("i").eq(0).removeClass("green")
+                                    $(spans[2]).find("i").eq(0).addClass("red")
+                                } else if (e.price_change < 0) {
+                                    $(spans[2]).find("i").eq(0).removeClass("red")
+                                    $(spans[2]).find("i").eq(0).addClass("green")
+                                }
+                                $(spans[2]).find("i").eq(0).html(e.price_change);
+                                if (e.price_change > 0) {
+                                    $(spans[2]).find("i").eq(1).removeClass("green")
+                                    $(spans[2]).find("i").eq(1).addClass("red")
+                                } else if (e.price_change < 0) {
+                                    $(spans[2]).find("i").eq(1).removeClass("red")
+                                    $(spans[2]).find("i").eq(1).addClass("green")
+                                }
+                                $(spans[2]).find("i").eq(1).html(e.p_change);
+                            }
+                        });
+                    });
+                } else {
+                    showToast("读取指数失败");
+                }
+                setTimeout(GetZhiShu, 3000);
+            });
+        }
+
+        function goAddStrategy(code) {
+            api.openWin({
+                name: 'addStrategy',
+                url: 'addStrategy.html',
+                pageParam: {
+                    stockCode: code
+                }
+            });
+        }
+
+        function goEdit(code) {
+            api.openWin({
+                name: 'editselfstock',
+                url: 'editselfstock.html',
+                slidBackEnabled: false
+            });
+        }
+
+        function goSearch() {
+            api.openWin({
+                name: 'search',
+                url: 'search.html'
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <script type="text/template" id="stocklistTemplate">
+        {{each List as value}}
+        <li code="{{value.stock_code}}" onclick="goAddStrategy('{{value.stock_code}}')">
+            <span class="stock-list-name">{{value.stock_name}}<i class="stock-list-munb">{{value.stock_code}}</i></span>
+            <span class="stock-list-price">0.00</span>
+            <span><i class="stock-list-gains bg-gray">0.00%</i></span>
+        </li>
+        {{/each}}
+    </script>
+
+    <div class="header">
+        <div class="search_box nei_tit">
+            自选股
+        </div>
+        <a class="right-ico search" onclick="goSearch()"></a>
+    </div>
+    <div id="wrapper">
+        <div id="scroller" style="margin-bottom: 3rem;">
+            <!-- 指数 -->
+            <div class="wcp-first-box swiper-container" style="margin-bottom: 0.65rem;">
+                <div id="zhishulist" class="swiper-wrapper">
+                    <div class="swiper-slide">
+                        <ul class="plate plate-diso">
+                            <li>
+                                <span class="palte-tit">上证指数</span>
+                                <span class="palte-munb">0000.00</span>
+                                <span><i>0.00</i><i>0.00%</i></span>
+                            </li>
+                            <li>
+                                <span class="palte-tit">深证成指</span>
+                                <span class="palte-munb">00000.0</span>
+                                <span><i>0.00</i><i>0.00%</i></span>
+                            </li>
+                            <li class="plate-last">
+                                <span class="palte-tit">创业板指</span>
+                                <span class="palte-munb">0000.00</span>
+                                <span><i>0.00</i><i>0.00%</i></span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="swiper-slide">
+                        <ul class="plate plate-diso">
+                            <li>
+                                <span class="palte-tit">沪深300</span>
+                                <span class="palte-munb">0000.00</span>
+                                <span><i>0.00</i><i>0.00%</i></span>
+                            </li>
+                            <li>
+                                <span class="palte-tit">上证50</span>
+                                <span class="palte-munb">0000.00</span>
+                                <span><i>0.00</i><i>0.00%</i></span>
+                            </li>
+                            <li class="plate-last">
+                                <span class="palte-tit">中证500</span>
+                                <span class="palte-munb">0000.00</span>
+                                <span><i>0.00</i><i>0.00%</i></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- Add Pagination -->
+                <div class="swiper-pagination"></div>
+            </div>
+
+            <!-- 自选股票列表 -->
+            <div class="wcp-second-box">
+                <ul class="stock-list stock-list-bot">
+                    <li class="stock-list-tit">
+                        <span>
+                        <a onclick="goSearch()"><em><i class="iconfont icon-jia"></i>添加</em></a>
+                        <a onclick="goEdit()"><em><i class="iconfont icon-bianji"></i>编辑</em></a>
+                      </span>
+                        <span class="stock-list-tr sort-ud"><i>最新价</i><i class="sort-icon"></i></span>
+                        <span class="stock-list-tr sort-ud"><i>涨跌幅</i><i class="sort-icon"></i></span>
+                    </li>
+                    <div id="stocklist">
+
+                    </div>
+                </ul>
+            </div>
+            <!-- 按钮 -->
+            <div class="stock-list-btn">
+                <a onclick="goSearch()">
+                    <button class="wcp-btn">加自选</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

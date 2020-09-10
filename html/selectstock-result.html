@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>关于我们</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/quotation.css" type="text/css" rel="stylesheet">
+    <link href="../css/index.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/quotation.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <style>
+        #left_table1,
+        #left_table2 {
+            width: 100%;
+        }
+
+        #left_div {
+            width: 30%;
+            float: left;
+        }
+
+        #left_div1 {
+            width: 100%;
+        }
+
+        #left_div2 {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #left_table1 th {
+            background: #f5f5f5;
+            font-weight: normal;
+        }
+
+        #left_table2 th {
+            width: 100%;
+            display: block;
+            font-weight: normal;
+        }
+
+        #date-result th,
+        #left_table1 th,
+        #right_div th,
+        #right_div td {
+            font-size: 1rem;
+            text-align: left;
+            border-bottom: 1px #e6e6e6 solid;
+        }
+
+        #left_table1 th {
+            padding-left: .85rem;
+        }
+
+        #date-result th {
+            padding: .3rem 0 0 .85rem;
+        }
+
+        #date-result i {
+            font-size: .875rem;
+            color: #999;
+        }
+
+        #right_div i {
+            font-size: .75rem;
+        }
+
+        #right_div {
+            float: left;
+        }
+
+        #right_div1 {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #right_div2 {
+            margin-top: 0;
+            width: 100%;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #right_table1 {
+            min-width: 300px;
+            overflow: scroll;
+        }
+
+        #right_table2 {
+            min-width: 300px;
+            max-width: 1000px;
+            white-space: nowrap;
+        }
+
+        #right_table1 th,
+        #right_table2 td {
+            min-width: 100px !important;
+        }
+
+        #right_table1 th {
+            background: #f5f5f5;
+            text-align: center;
+            padding: 0;
+            font-weight: normal;
+        }
+
+        #right_table2 td {
+            text-align: center;
+        }
+
+        .trend tr,
+        .trend tr th,
+        .trend tr td {
+            height: 3rem;
+            overflow: hidden;
+        }
+
+        .trend td,
+        .trend th {
+            font-size: .875rem;
+        }
+
+        .trend td i,
+        .trend th i {
+            display: block;
+        }
+    </style>
+    <script type="text/javascript">
+        var page = 1;
+        var _interface;
+        var _selectstring;
+        var isload = false;
+        var codes = "";
+        _apiready = function() {
+            _selectstring = api.pageParam.condition;
+            if (_selectstring.length > 0) {
+                _selectstring = _selectstring.substring(0, _selectstring.length - 1);
+
+                sendGet(ServicesConifg.SelectStocks.getInterface, function(data) {
+                    var succ = JSON.parse(data);
+                    if (succ.ret == 0) {
+                        _interface = JSON.parse(succ.Content).vtTypeConditionSearch;
+                        var strs = _selectstring.split("|");
+                        $.each(strs, function(i, e) {
+                            var kv = e.split("_");
+                            var sFieldShowWord = "";
+                            $.each(_interface, function(ii, ee) {
+                                var t = ee.vtConditionSearch.filter(function(item) {
+                                    return item.eField == kv[0];
+                                });
+                                if (t.length > 0) {
+                                    sFieldShowWord = t[0].sFieldShowWord;
+                                    return;
+                                }
+                            });
+                            $("#selectStr").append("<span>" + sFieldShowWord + "<i>" + kv[1] + "</i></span>");
+                        });
+                    }
+                });
+            }
+            getData();
+            StocksInfo();
+            $(document).scroll(function() {
+                if ($(document).height() - $(document).scrollTop() < 30 + $(window).height() && !isload) {
+                    console.log(1);
+                    page++;
+                    getData();
+                }
+            });
+        };
+
+        function getData() {
+            isload = true;
+            showLoading();
+            sendGet(ServicesConifg.SelectStocks.getSearchES + "?condition=" + _selectstring + "&PageNum=" + page,
+                function(data) {
+                    var succ = JSON.parse(data);
+                    if (succ.ret == 0) {
+                        var data = JSON.parse(succ.Content);
+                        if (page > data.iTotalPageNum) {
+                            closeLoading();
+                            return;
+                        }
+                        $("#count").html(data.stIAPickStockBatch.iTotalNum);
+                        $(".fr").html(data.stIAPickStockBatch.sUpdateTime);
+                        var h = "";
+                        $.each(data.stIAPickStockBatch.vHeader, function(i, e) {
+                            if (i > 0)
+                                h += "<th>" + e + "</th>";
+                        });
+                        $("#right_table1 tr").eq(0).append(h);
+                        var gp = "";
+                        var res = "";
+                        $.each(data.stIAPickStockBatch.vIAPickStock, function(i, e) {
+                            gp += "<tr><th>" + '<a onclick="goaddStrategy(\'' + e.stSecInfo.sDtSecCode.substring(4) + '\')">' + e.vValue[0] + "<i>" + e.stSecInfo.sDtSecCode.substring(4) + "</i></a></th></tr>"
+                            res += "<tr><td data-code='" + e.stSecInfo.sDtSecCode.substring(4) + "'>0.00<i>0.00%</i></td>";
+                            codes += e.stSecInfo.sDtSecCode.substring(4) + ",";
+                            $.each(e.vValue, function(ii, ee) {
+                                if (ii > 0)
+                                    res += "<td>" + ee + "</td>";
+                            });
+                            res += "</tr>";
+                        });
+                        $("#date-result").append(gp);
+                        $("#main-result").append(res);
+
+                        $("#right_div2").unbind("scroll").scroll(function() {
+                            $("#right_div1").scrollLeft($("#right_div2").scrollLeft());
+                        });
+                    }
+                    isload = false;
+                    closeLoading();
+                });
+        }
+
+        function StocksInfo() {
+            sendPost(ServicesConifg.Quotation.StocksInfo, {
+                stockcode: codes
+            }, function(data) {
+                $(data).each(function(i, e) {
+                    e.NewPrice = e.NewPrice == 0 ? e.YesterdayCollect : e.NewPrice;
+                    var zf = $("td[data-code='" + e.StockCode + "']");
+                    zf.removeClass("red").removeClass("green");
+                    if (e.DifferentialPersent > 0) {
+                        zf.addClass("red");
+                        zf.html(e.NewPrice.toFixed(2) + "<i>" + e.DifferentialPersent.toFixed(2) + "%</i>");
+                    } else if (e.DifferentialPersent < 0) {
+                        zf.addClass("green");
+                        zf.html(e.NewPrice.toFixed(2) + "<i>" + e.DifferentialPersent.toFixed(2) + "%</i>");
+                    } else {
+                        zf.html(e.NewPrice.toFixed(2) + "<i>" + e.DifferentialPersent.toFixed(2) + "%</i>");
+                    }
+                });
+                setTimeout(function() {
+                    StocksInfo();
+                }, 3000);
+            }, function(err) {
+                console.log(err);
+            }, false, true);
+        }
+
+        var goaddStrategy = function(code) {
+            event.stopPropagation();
+            api.openWin({
+                name: 'addStrategy',
+                url: 'addStrategy.html',
+                pageParam: {
+                    stockCode: code
+                }
+            });
+        }
+
+        var goTabHome = function() {
+            api.sendEvent({
+                name: 'goHome'
+            });
+            api.closeWin();
+        }
+        var goTabStrategy = function() {
+            api.sendEvent({
+                name: 'goStrategy'
+            });
+            api.closeWin();
+        }
+        var goTabSelfstock = function() {
+            api.sendEvent({
+                name: 'GetSelfStock'
+            });
+            api.sendEvent({
+                name: 'goSelfstock'
+            });
+            api.closeWin();
+        }
+        var goTabselectstock = function() {
+            api.sendEvent({
+                name: 'goSelectStock'
+            });
+            api.closeWin({
+                name: "selectstock-condition"
+            });
+            api.closeWin();
+        }
+        var goTabMine = function() {
+            api.sendEvent({
+                name: 'goMine'
+            });
+            api.closeWin();
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- header -->
+    <div class="header" style="position:fixed;">
+        <a href="" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            选股详情
+        </div>
+    </div>
+    <div style="height:3rem; clear:both;"></div>
+    <div class="alert-danger" onclick="javascript:$('.alert-danger').hide('slow');" style="width:94%; margin:.65rem 3%; color: #a94442; text-align: center; line-height: 1.6rem; font-size: .875rem; background-color: #f2dede; border-color: #ebccd1; border: 1px solid transparent; border-radius: 4px; padding: .2rem 0;">
+        <strong>提示！</strong>推荐股票为第三方机构模型结果，仅供参考，<br>不作为入市依据，据此入市，风险自担
+    </div>
+    <!-- 内容 -->
+    <div class="smart-res">
+        <div class="smart-resfl">选股策略</div>
+        <div class="smart-resfr" id="selectStr">
+        </div>
+    </div>
+    <h3 class="smart-detit">
+    选出股数：
+    <i id="count">0</i>
+    <em class="fr">更新时间：2017-12-15</em>
+</h3>
+
+
+    <!-- 策略推荐个股 -->
+    <div class="container-fluid trend">
+        <div id="left_div">
+            <div id="left_div1">
+                <table id="left_table1" class="table table-bordered">
+                    <tr>
+                        <th>股票名称</th>
+                    </tr>
+                </table>
+            </div>
+            <div id="left_div2">
+                <table id="left_table2" class="table table-bordered">
+                    <tbody id="date-result">
+                        <!-- <tr>
+                        <th>盈利股份
+                            <i>000002</i>
+                        </th>
+                    </tr> -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="right_div" style="width: 70%;">
+            <div id="right_div1">
+                <div id="right_div">
+                    <table id="right_table1" class="table table-bordered">
+                        <tr>
+                            <th>最新价</th>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div id="right_div2">
+                <table id="right_table2" class="table table-bordered ds-table">
+                    <tbody id="main-result">
+                        <!-- <tr>
+                        <td>6.90
+                            <i class="red">0.29%</i>
+                        </td>
+                        <td>22.54%</td>
+                        <td>2.54元</td>
+                        <td>3.56%</td>
+                        <td>8</td>
+                    </tr> -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- <div style="height:3.6rem; clear:both;"></div>
+    <div class="footer" id="footer">
+        <ul>
+            <li id="tab-home"><a href="#" onclick="goTabHome();"><i class="iconfont icon-shouye-shouye"></i><span>首页</span></a></li>
+            <li id="tab-strategy"><a href="#" onclick="goTabStrategy();"><i class="iconfont icon-celve101"></i><span>策略</span></a></li>
+            <li id="tab-selfstock"><a href="#" onclick="goTabSelfstock();"><i class="iconfont icon-xuanze"></i><span>自选</span></a></li>
+            <li id="tab-selectstock"><a href="#" onclick="goTabselectstock();"><i class="iconfont icon-xuangu"></i><span>选股</span></a></li>
+            <li id="tab-mine"><a href="#" onclick="goTabMine();"><i class="iconfont icon-me"></i><span>个人中心</span></a></li>
+        </ul>
+    </div> -->
+
+</body>
+
+</html>

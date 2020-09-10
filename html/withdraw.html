@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>提现</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/strategy.css" type="text/css" rel="stylesheet">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/index.css" type="text/css" rel="stylesheet">
+    <link href="../css/layer.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript" src="../script/banks.js"></script>
+    <script type="text/javascript" src="../script/layer.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            sendGet(ServicesConifg.SysConfig.QueryExtractMessage, function(succ) {
+                $("#ExtractMessage").html(succ.ExtractMessage);
+            }, function(err) {});
+            var user = getUserInfo();
+            $api.dom("#realname").value = user.RealName;
+            $api.dom("#idcard").value = user.UserCer;
+            $api.dom("#bankcard").value = user.BankCard;
+            $api.dom("#bankbranch").value = user.BankBranch;
+            $api.dom("#bankname").value = user.BankName;
+            if (user.CardType == 0) {
+                $("#cardtype li").removeClass("active");
+                $("#cardtype li").eq(0).addClass("active");
+                $("#realnametext").html("企业名称");
+                $("#realname").attr("placeholder", "请输入企业名称");
+            } else if (user.CardType == 1) {
+                $("#cardtype li").removeClass("active");
+                $("#cardtype li").eq(1).addClass("active");
+                $("#realnametext").html("真实姓名");
+                $("#realname").attr("placeholder", "请输入真实姓名");
+            }
+            $api.attr($api.dom("#money"), "placeholder", "最多可以提取" + user.Balance + "元");
+            $api.addEvt($api.dom(".top-down"), 'click', function() {
+                if (user.Balance >= 50000) {
+                    showToast("提现金额大于5万需填写开户行信息。");
+                    $("#bankbranchbox").show();
+                    $api.dom("#money").value = 50000;
+                } else {
+                    $("#bankbranchbox").hide();
+                    $api.dom("#money").value = user.Balance;
+                }
+            });
+
+            $("#money").blur(function() {
+                if (parseFloat($("#money").val()) >= 50000) {
+                    if ($("#bankbranchbox").is(':hidden')) {
+                        showToast("提现金额大于5万需填写开户行信息。");
+                        $("#bankbranchbox").show();
+                    }
+                } else {
+                    $("#bankbranchbox").hide();
+                }
+            });
+
+            $("#cardtype li").click(function(e) {
+                $("#cardtype li").removeClass("active");
+                $(this).addClass("active");
+                if ($("#cardtype li.active").index() == 0) {
+                    $("#realnametext").html("企业名称");
+                    $("#realname").attr("placeholder", "请输入企业名称");
+                } else {
+                    $("#realnametext").html("真实姓名");
+                    $("#realname").attr("placeholder", "请输入真实姓名");
+                }
+            });
+
+            $("#bankname").click(function() {
+                //页面层
+                var _html =
+                    "<div class='search-form dis-s01'><i class='iconfont icon-sousuo'></i><input id='frmSearch' type='text' class='search-text' placeholder='点击搜索银行'><span class='search-qx' onclick='closeslect()'>取消</span></div><div class='wcp-first-box'><p class='sea-his-tit'>已选银行</p><ul class='sea-his-box' id='bankSelectSearch'></ul></div><div class='wcp-first-box'><p class='sea-his-tit'>选择银行</p><ul class='sea-his-box' id='bankSearch' style='overflow: scroll;height: 33rem;'></ul></div>"
+                layer.open({
+                    type: 1,
+                    content: _html,
+                    anim: 'up',
+                    style: 'position:fixed; bottom:0; left:0; width: 100%; height: ' + window.innerHeight + 'px; padding:0; border:none;',
+                    success: function() {
+                        $("#bankSearch").html("");
+                        var selectbank = $("#bankname").val();
+                        if (selectbank != "") {
+                            $("#bankSelectSearch").html("<li style=\"width:90%;border-color: #fa5c36;color: #fa5c36;\" onclick=\"selectBank('" + selectbank + "')\">" + selectbank + "</li>");
+                        }
+                        $(banks).each(function(e, n) {
+                            $("#bankSearch").append("<li style=\"width:90%;\" onclick=\"selectBank('" + n + "')\">" + n + "</li>");
+                        });
+                        $("#frmSearch").keyup(function() {
+                            var bs
+                            if ($("#frmSearch").val() != "") {
+                                bs = banks.filter(function(age) {
+                                    return age.indexOf($("#frmSearch").val()) > -1;
+                                });
+                            } else {
+                                bs = banks;
+                            }
+                            $("#bankSearch").html("");
+                            $(bs).each(function(e, n) {
+                                $("#bankSearch").append("<li style=\"width:90%;\" onclick=\"selectBank('" + n + "')\">" + n + "</li>");
+                            });
+                        });
+                    },
+                    end: function() {
+
+                    }
+                });
+            });
+        };
+        var closeslect = function() {
+            layer.closeAll();
+        };
+        var selectBank = function(bank) {
+            $("#bankname").val(bank);
+            closeslect();
+        }
+        var withsraw = function() {
+            var money = $("#money").val();
+            var realname = $("#realname").val();
+            var idcard = $("#idcard").val();
+            var bankname = $("#bankname").val();
+            var bankcard = $("#bankcard").val();
+            var bankbranch = $("#bankbranch").val();
+            var password = $("#payPassword").val();
+            //验证
+            if (1 == 1) {
+                if (realname.length == 0) {
+                    showToast("请输入真实姓名");
+                    return false;
+                }
+            } else {
+                if (realname.length == 0) {
+                    showToast("请输入企业名称");
+                    return false;
+                }
+            }
+
+            if (!/^\d{17}(\d|x)$/i.test(idcard)) {
+                showToast("请输入正确身份证号码");
+                return false;
+            }
+            if (!/[0-9]{6,}/.test(bankcard)) {
+                showToast("请输入正确银行卡号");
+                return false;
+            }
+            if (bankname.length == 0) {
+                showToast("请输入所属银行");
+                return false;
+            }
+            if (parseFloat(money) >= 50000 && bankbranch.length == 0) {
+                showToast("请输入开户行");
+                return false;
+            }
+            if (money < 2.0099) {
+                showToast("金额需大于2元");
+                return false;
+            }
+            if (money > 50000) {
+                showToast("单笔提现最高5万元");
+                return false;
+            }
+            if (password.length == 0) {
+                showToast("请输入交易密码");
+                return false;
+            }
+            if (bankname == "请选择所属银行") {
+                showToast("请选择所属银行");
+                return false;
+            }
+            //身份认证
+            showLoading("提交中");
+            $("#submitbtn").attr('disabled', true);
+            sendPost(ServicesConifg.Account.Authentication, {
+                    realName: realname,
+                    IDNum: idcard,
+                    bankCard: bankcard,
+                    bankName: bankname,
+                    bankBranch: bankbranch,
+                    cardType: 1
+                },
+                function(succ) {
+                    //提现
+                    if (/^([1-9]\d*|0)(\.\d+)?$/.test(money) && money > 2.0099) {
+                        sendPost(ServicesConifg.Account.Withdraw, {
+                                money: money,
+                                payPassword: password
+                            },
+                            function(rel) {
+                                closeLoading();
+                                showToast(rel);
+                                api.closeWin();
+                                api.sendEvent({
+                                    name: 'userInfoBack'
+                                });
+                                api.openWin({
+                                    name: 'account',
+                                    url: 'account.html'
+                                });
+                                $("#submitbtn").attr('disabled', false);
+                            },
+                            function(err) {
+                                closeLoading();
+                                showToast(err);
+                                $("#submitbtn").attr('disabled', false);
+                            });
+                    } else {
+                        closeLoading();
+                        showToast("请输入一个大于2的数字");
+                        $("#submitbtn").attr('disabled', false);
+                    }
+                },
+                function(err) {
+                    closeLoading();
+                    showToast(err);
+                    $("#submitbtn").attr('disabled', false);
+                });
+        };
+    </script>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            提现
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container">
+        <!-- top-up -->
+        <div class="wcp-second-box wcp-dl wcp-dl-border">
+            <!-- <dl>
+                <dt>卡片类型</dt>
+                <dd class="gp-tabs" style="margin-left:0;">
+                    <ul id="cardtype">
+                        <li style="font-size:1rem;" class="active" value="0"><a href="javascript:;">对公账户</a></li>
+                        <li style="font-size:1rem;" value="1"><a href="javascript:;">对私账户</a></li>
+                    </ul>
+                </dd>
+            </dl> -->
+            <dl>
+                <dt id="realnametext">真实姓名</dt>
+                <dd><input id="realname" type="text" class="textinput" placeholder="请输入真实姓名" value="" /></dd>
+            </dl>
+            <dl>
+                <dt>身份证号</dt>
+                <dd><input id="idcard" type="text" class="textinput" placeholder="请输入身份证号" value="" /></dd>
+            </dl>
+            <dl>
+                <dt>银行卡号</dt>
+                <dd><input id="bankcard" type="text" class="textinput" placeholder="请输入银行卡号" value="" /></dd>
+            </dl>
+            <dl>
+                <dt>所属银行</dt>
+                <dd>
+                    <input id="bankname" type="text" class="textinput" readonly="readonly" placeholder="请输入所属银行" value="" />
+                    <!-- <select id="bankname" class="textinput" style="border: none;font-size: 1rem;width: 100%;">
+                      <option value="请选择所属银行">请选择所属银行</option>
+                    </select> -->
+                </dd>
+            </dl>
+            <dl id="bankbranchbox" style="display:none;">
+                <dt>&nbsp;开&nbsp;户&nbsp;行</dt>
+                <dd><input id="bankbranch" type="text" class="textinput" placeholder="请输入开户行" value="" /></dd>
+            </dl>
+        </div>
+        <!-- top-down -->
+        <div class="wcp-second-box wcp-dl wcp-dl-border">
+            <dl>
+                <dt>提现金额</dt>
+                <dd><input type="text" id="money" class="textinput" placeholder="最多可以提取0.00元" /></dd>
+                <span class="top-down">全部提现</span>
+            </dl>
+
+            <dl>
+                <dt>交易密码</dt>
+                <dd><input type="password" id="payPassword" class="textinput" placeholder="请输入交易密码" /></dd>
+            </dl>
+        </div>
+
+        <div id="ExtractMessage" style="margin-left: 0.85rem;"></div>
+
+        <div class="fill-btn"><button id="submitbtn" class="wcp-btn wcp-btn-pad03 wcp-btn-red" onclick="withsraw()">提现申请</button></div>
+    </div>
+</body>
+
+</html>

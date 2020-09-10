@@ -1,0 +1,127 @@
+/*我的资产 */
+.stra-ass{ display: block; overflow: hidden; margin: .5rem 0;}
+.stra-ass li{ float: left; padding-left:.85rem; width: 50%; font-size: 1rem; color: #999; }
+.stra-ass li span{ display: block; line-height: 2rem;  }
+.stra-assets{ display: block; overflow: hidden; margin-bottom: .65rem;}
+.stra-assets li{float: left; padding-left:.85rem; width: 50%; font-size: .875rem; color: #999; line-height: 1.8rem; }
+.stra-assets li i{ float: left; display: block; width: 5px; height: .875rem; border-radius: 20px; margin: .5rem .3rem 0 0; }
+.stra-assets li i.i1{ background-color:#f15c62;  }
+.stra-assets li i.i2{ background-color:#f3a715;  }
+.stra-assets li i.i3{ background-color:#2faae7;  }
+.stra-assets li i.i4{ background-color:#7ccc53;  }
+
+/*策略持仓*/
+.stra-cc{ padding: .5rem .85rem; overflow: hidden; position:relative; }
+.stra-cc li{float: left; width: 50%; font-size: .875rem; line-height: 1.8rem;}
+.stra-cc li.stra-cc-tit i{ color: #999; line-height: 1.8rem;}
+.stra-cc li.stra-cc-cz{ color: #999;}
+.stra-cc .stra-cc-btn{position: absolute; right: 1.8rem; top: 1.65rem; font-size: 1.6rem; color: #999; }
+.icon-rotate-copy{ -webkit-transform:rotate(45deg); transform:rotate(180deg); -webkit-transition:all 0.3s linear; transition:all 0.3s linear; }
+.stra-cc-box{ display: none; background-color: #000; padding: .65rem .85rem; overflow: hidden; }
+.stra-cc-box li{ float: left; color: #fff; font-size: .8rem; line-height: 1.6rem; }
+.stra-cc-box li.w1{ width: 30%;}
+.stra-cc-box li.w2{ width: 40%;}
+.stra-cc-box li span{ margin-left: .3rem; }
+.stra-cc-box p .wcp-btn{ float: right; margin: .65rem 0 0 .4rem; }
+
+/*历史记录*/
+.his-record{ overflow: hidden; margin: .5rem 0; }
+.his-record li{ width: 33.3%; float: left; color: #999; font-size: .875rem; line-height: 1.6rem; text-align: center; }
+.his-record li span{ display: block; }
+
+/*交易详情*/
+.his-retit{ line-height: 2.8rem; font-size: 1.1rem; padding-left: .85rem; font-weight: normal; position: relative; display: block; }
+.his-retit span{ color: #999; font-size: .7rem; position: absolute; right: .5rem; bottom: -.2rem; }
+.his-retit span i{ color: #000;}
+.his-retit em{ font-style: normal; font-size: .875rem; margin-left: .3rem; color: #999; }
+.his-retit .icon-icon{ position: absolute; right: 0.25rem; top: 0.1rem; color: #ccc; font-size: 1.2rem; }
+.his-retit a{ display: block; }
+.his-detit{ font-size: .875rem;  margin: .65rem 0 0.2rem .85rem; }
+.his-detit span{ float: left; display: block; width: 5px; height: .875rem; border-radius: 20px; margin: .26rem .3rem 0 0; }
+.his-detit span.i1{ background-color:#f3a715;  }
+.his-detit span.i2{ background-color:#7ccc53;  }
+.his-detit span.i3{ background-color:#f15c62;  }
+.his-detail {overflow: hidden; margin: 0 0 .5rem .85rem;}
+.his-detail li{ width: 50%; float: left; color: #999; font-size: .875rem; line-height: 1.8rem;}
+.his-detail li span{ margin-left: .5rem; }
+.his-detail li .col{ color: #000; }
+.his-detail li .sm{ font-size: .8rem; }
+
+/*创建策略 这里修改移到quotation.css文件里面*/
+/*.gp-tit{ padding: .45rem .85rem; position: relative; display: block; overflow: hidden; }
+.gp-tit .gp-name{ font-size: 1.1rem; line-height: 2.4rem; display: inline-block; float: left; margin-right: 2.4rem;  }
+.gp-tit .gp-num{color: #999; font-size: 1rem; line-height: 1.6rem; display: block;}
+.gp-tit .gp-jg{ font-size: 1.1rem; margin-left: 1rem; line-height: 2.4rem;}
+.gp-tit .gp-jg span{ display: block; line-height: 1.6rem; font-size: .875rem;}
+.gp-tit .gp-onoff{ position: absolute; right: 1.6rem; top: 1.5rem; font-size: .875rem; color: #fa5c36; }
+.gp-tit .icon-arrow-copy{ font-size: 1.2rem; color: #ccc;}
+
+.market-xq{ display: block; overflow: hidden; padding: .45rem 0.85rem; }
+.market-xq li{ float: left; font-size: .8rem; line-height: 1.6rem; color: #999; }
+.market-xq li.w1{ width: 20%;}
+.market-xq li.w2{ width: 35%;}
+.market-xq li.w3{ width: 25%;}
+.market-xq li span{ color: #000; margin-left:.3rem; }*/
+
+/*t+1 and t+n*/
+.gp-tabs{ margin-top: .65rem;  line-height: 2rem; margin-left: 18%; }
+.gp-tabs span{ color: #999; float:left; font-size: 1rem; margin-right: .4rem; }
+.gp-tabs ul{ overflow:hidden; }
+.gp-tabs li{border: 1px solid #e6e6e6;  background-color: #fff; float: left; font-size: 1.6em; font-weight:normal; text-align: center; width: 25%;}
+.gp-tabs li a{color: #999;}
+.gp-tabs li.active {background-color:#fa5c36;  border: 1px solid #fa5c36;}
+.gp-tabs li.active a{color:#fff;}
+/*投入信用金*/
+.trade-choose{ padding:.65rem .85rem; position: relative; }
+.trade-choose p{line-height: 3rem;}
+.trade-choose .trade-left{ font-size: .875rem; width: 21%; margin-right: .65rem; text-align: right; float: left; display: inline-block; }
+.trade-choose .hgt{ padding-bottom: 4.5rem; }
+.trade-text{font-size: .875rem; height: 1.8rem; padding-left: 1.3rem;   width: 8rem;  border:1px solid #e0e0e0; border-radius: 4px; }
+.trade-text-box{ position: relative; display: inline-block;  width: 8rem; }
+.trade-text-box::before,.trade-text-box::after{ content:"¥"; position: absolute; left:.5rem; top:-.1rem; font-size: .875rem; width: .44rem;line-height: 3rem;}
+.trade-text-box::after{ content:"元"; left:auto;right: 1rem;  font-size: .8rem;}
+.trade-sm{ font-size: .875rem; color: #999; }
+.trade-border{ display: block; overflow: hidden; position: relative; }
+.trade-money li{ color:#000; border: 1px solid #e0e0e0; font-size: .875rem; border-radius: 4px; width: 15%; line-height: 2rem; float: left; text-align: center; margin:0 .85rem .65rem 0; }
+.trade-money li.on{ border: 1px solid #fa5c36; color: #fa5c36; }
+/*买入数量*/
+.trade-num{ padding: .45rem .85rem; font-size: .875rem;   }
+.trade-num span{ display: inline-block; line-height: 2.4rem; }
+.trade-numl{ width: 18%; float: left;}
+.trade-numc{ margin-left: .65rem;  line-height: 1.2rem; }
+.trade-numc em{ font-style: normal; color: #999; display: block; line-height: .8rem; margin-bottom: .65rem; font-size: .7rem;}
+.trade-numc .icon-edit{color:#ccc; font-size: 1.6rem; margin-left: .8rem;}
+.trade-numr{ width: 30%; float: right; color: #288ce2; font-size: 1rem;  }
+/*止盈止损*/
+.trade-profit{ font-size: .875rem; line-height: 2.2rem; padding: .45rem .85rem; overflow: hidden; }
+.pro-bg{ font-size: 1rem; display:inline-block;  background-color: #f7f7f7;line-height: 1.8rem;  }
+.pro-symbol{  width: 25px; text-align: center;}
+.pro-mum{  width: 90px; padding-left: 10px; }
+.trade-expect{ color: #999; font-size: 1rem;  line-height: 2.2rem; }
+/*抵扣金*/
+.trade-deduct { margin: .45rem .85rem; font-size: .875rem; }
+.trade-deh1{ line-height: 1.8rem; }
+.trade-deh2{line-height: 2.4rem;}
+.trade-deduct .trade-del{ margin-right: .45rem; line-height: 1.2rem; }
+.trade-deduct .trade-der{ float: right;  }
+.trade-deduct .trade-der em{ font-style: normal; }
+.trade-deduct .trade-sm{ font-size: .7rem; color: #999; display: block; line-height: .8rem; }
+/*提交策略*/
+.submit-stra{ box-shadow:rgba(0,0,0,0.2) -1px 0 1px; height:4.2rem; position:fixed; z-index:9999; background:#fcfcfc; bottom: 0; left: 0; width: 100%; }
+.submit-stra li{ line-height: 1.3rem; font-size: .875rem; margin-left: .85rem; }
+.submit-stra .wcp-btn{ position: absolute; width: 26%; height:4.2rem; right: 0; bottom: 0; border-radius: 0; font-size: 1rem; }
+.submit-stra input{ -webkit-appearance: checkbox; float: left;  width: 16px; height: 16px;border: 1px solid #e0e0e0; border-radius: 4px; margin: 3px 3px 0 0; }
+
+.wcp-optional-btn{ padding: .9rem .8rem 0 .85rem;  position: absolute; right: 26%; bottom: 0; height:4.2rem; border-left: 1px solid #e6e6e6;  }
+.wcp-optional-btn .iconfont{ display: block; font-size: 1.3rem; margin-bottom: .1rem; text-align: center; } 
+.wcp-optional-btn .icon-jia,.wcp-optional-btn .icon-jia+span{ color: #fa5c36; }
+.wcp-optional-btn .icon-jian,.wcp-optional-btn .icon-jian+span{ color: #999; }
+
+/*弹框信息*/
+.tk-new{ margin: .65rem; display: block; height: 36rem; overflow-y: scroll; }
+.tk-new li{ position: relative; margin-bottom: .65rem; font-size: .875rem; }
+.tk-new li span{ display: block; }
+.tk-new .tk-new-tit{ color: #fa5c36; font-size: 1rem; line-height: 2rem;  }
+.tk-new .tk-new-con{ line-height: 1.4rem;}
+.tk-new .tk-new-time{ font-size: .8rem; text-align: right; color: #999; line-height: 2rem; }
+.tk-new .tk-new-time i{ color: #666; margin-right: 6px; }

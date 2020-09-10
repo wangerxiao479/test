@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>登录微操盘</title>
+    <link href="css/common.css" type="text/css" rel="stylesheet">
+    <link href="fontico/iconfont.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            登录系统
+        </div>
+    </div>
+
+    <div class="ui-container">
+        <div class="login">
+            <img id="userHeader" src="images/general-tx.png" onerror="this.src='images/general-tx.png'">
+            <p id="userPhone">-</p>
+        </div>
+        <div class="wcp-second-box wcp-dl">
+            <dl>
+                <dt>登录密码</dt>
+                <dd>
+                    <input id="userPassword" type="password" placeholder="请输入登录密码" />
+                    <div id="show" class="eye-close"></div>
+                </dd>
+            </dl>
+        </div>
+        <a href="#">
+            <div class="fill-btn"><button id="loginSubmit" class="wcp-btn wcp-btn-pad03 wcp-btn-red">登录系统</button></div>
+        </a>
+        <p id="forgetPassword" class="login-mm blue">忘记密码？</p>
+    </div>
+</body>
+
+</html>
+<!--核心模块-->
+<script type="text/javascript" src="script/api.js"></script>
+<script type="text/javascript" src="script/app.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/fastclick.js"></script>
+<!--通用组件-->
+<script type="text/javascript" src="js/main.js"></script>
+<!--通信组件-->
+<script type="text/javascript" src="script/core-min.js"></script>
+<script type="text/javascript" src="script/aes.js"></script>
+<script type="text/javascript" src="script/secret.js"></script>
+<script type="text/javascript" src="script/cacheAjax.js"></script>
+<script type="text/javascript">
+    _apiready = function() {
+        //$api.fixStatusBar( $api.dom('header') );//发布正式版本后去除
+        api.setStatusBarStyle({
+            style: 'light',
+            color: "#f40303"
+        });
+
+        $("#userPhone").html(api.pageParam.userPhone);
+        $("#userHeader").attr("src", api.pageParam.userHeader);
+        $("#loginSubmit").click(function() {
+            loginSubmit();
+        });
+
+        var from = api.pageParam.from;
+        if (from) {
+            api.closeWin({
+                name: from
+            });
+        }
+        $("#forgetPassword").click(function() {
+            api.openWin({
+                name: 'forgetpassword',
+                url: 'forgetPassword.html',
+                pageParam: {
+                    userPhone: api.pageParam.userPhone
+                }
+            });
+        });
+    };
+    $("#show").click(function() {
+        $("#show").toggleClass("eye-open");
+        if ($("#show").hasClass("eye-open")) {
+            $("#userPassword").attr("type", "text");
+        } else {
+            $("#userPassword").attr("type", "password");
+        }
+    });
+
+    function loginSubmit() {
+        var userPhone = $api.dom("#userPhone").value;
+        showLoading("登录中");
+        var os = api.systemType;
+
+        sendPost(ServicesConifg.Account.QueryLogin, {
+            userPhone: api.pageParam.userPhone,
+            password: $("#userPassword").val(),
+            os: os
+        }, function(succ) {
+            closeLoading();
+            showToast("登录成功");
+            saveUserAccess(succ.access_token);
+            api.closeWin({
+                name: 'login'
+            });
+            api.closeWin({
+                name: 'registerOn'
+            });
+            api.sendEvent({
+                name: 'loginBack'
+            });
+            api.sendEvent({
+                name: 'userInfoBack'
+            });
+            api.closeWin();
+        }, function(err) {
+            closeLoading();
+            showToast(err);
+        });
+    }
+</script>

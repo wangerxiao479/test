@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>微操盘</title>
+
+    <link href="css/common.css" type="text/css" rel="stylesheet" />
+    <link href="fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <link href="css/index.css" type="text/css" rel="stylesheet" />
+    <link href="css/swiper.min.css" type="text/css" rel="stylesheet" />
+
+    <!--核心模块-->
+    <script type="text/javascript" src="script/api.js"></script>
+    <script type="text/javascript" src="script/app.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/fastclick.js"></script>
+    <script type="text/javascript" src="js/swiper.min.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="js/main.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="script/core-min.js"></script>
+    <script type="text/javascript" src="script/aes.js"></script>
+    <script type="text/javascript" src="script/secret.js"></script>
+    <script type="text/javascript" src="script/cacheAjax.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            api.setStatusBarStyle({
+                style: 'light',
+                color: "#fa5c36"
+            });
+            $("#startList").css("height", api.winHeight + "px");
+            var mySwiper = new Swiper('.swiper-container', {
+                pagination: '.swiper-pagination',
+                loop: false,
+                onSlideChangeEnd: function(swiper) {
+                    if (swiper.activeIndex == 3) {
+                        api.setPrefs({
+                            key: 'isFristOpen',
+                            value: 'No'
+                        });
+                        api.closeWin({
+                            name: 'start',
+                            animation: {
+                                type: "fade",
+                                subType: "from_right",
+                                duration: 300
+                            }
+                        });
+                    }
+                }
+            });
+        };
+    </script>
+</head>
+
+<body>
+    <div class="swiper-container">
+        <div class="swiper-wrapper" id="startList">
+            <div class="swiper-slide"><img src="images/1.jpg" /></div>
+            <div class="swiper-slide"><img src="images/2.jpg" /></div>
+            <div class="swiper-slide"><img src="images/3.jpg" /></div>
+            <div class="swiper-slide"><img src="images/4.jpg" /></div>
+        </div>
+        <!-- Add Pagination -->
+        <div class="swiper-pagination"></div>
+    </div>
+</body>
+
+</html>

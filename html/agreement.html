@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>协议列表</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+
+    <script type="text/javascript">
+        _apiready = function() {
+            loadAgreement();
+        };
+        var agressData = {};
+
+        var loadAgreement = function() {
+            showLoading();
+            sendPost(ServicesConifg.Account.QueryPact,{},function(succ){
+              agressData = succ;
+              $api.dom("#content").innerHTML = template("templateAgreement", {
+                  List: succ
+              });
+              closeLoading();
+            },function(err){
+              showToast("加载失败");
+              closeLoading();
+            },true,false);
+        };
+        var goAgreement = function(i) {
+            api.openWin({
+                name: 'agreementDes',
+                url: 'agreementDes.html',
+                pageParam: {
+                    content: agressData[i].content,
+                    title:agressData[i].title
+                }
+            });
+
+        };
+    </script>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="templateAgreement">
+        {{each List as value i}}
+        <li>
+            <a href="#" onclick="goAgreement({{i}})">
+                <span class="data-tit01">{{value.title}}</span>
+                <i class="iconfont icon-icon"></i>
+            </a>
+        </li>
+        {{/each}}
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            相关协议
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+
+    <!-- 3-data -->
+    <div class="wcp-second-box">
+        <ul class="my-data" id="content">
+
+        </ul>
+    </div>
+
+
+</body>
+
+</html>

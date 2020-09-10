@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>订阅消息</title>
+    <link href="../css/swiper.min.css" rel="stylesheet">
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/style.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+
+    <script type="text/javascript">
+        var jscroller;
+        window.onload = function() {
+            var tabsSwiper = new Swiper('#tabs-container', {
+                speed: 500,
+                onSlideChangeStart: function() {
+                    $(".tabs li.active").removeClass('active')
+                    $(".tabs li").eq(tabsSwiper.activeIndex).addClass('active')
+                }
+            })
+            $(".tabs li").on('touchstart mousedown', function(e) {
+                e.preventDefault()
+                $(".tabs .active").removeClass('active')
+                $(this).addClass('active')
+                tabsSwiper.slideTo($(this).index())
+            })
+            $(".tabs li").click(function(e) {
+                e.preventDefault()
+            });
+        }
+
+        _apiready = function() {
+            template.helper("TimeFormat", function(dec) {
+                if (dec != null) {
+                    return dec.replace("T", " ").substring(0, dec.indexOf('.'));
+                } else {
+                    return "";
+                }
+            });
+
+
+            jscroller = new JRoll("#wrapper");
+            var tHtml = $("#template").html(); // 加载模板
+            jscroller.infinite({ //上拉加载
+                getData: function(page, callback, errorCallback) {
+                    loadOrderMessage(page, function(data) {
+                        callback(data);
+                    });
+                },
+                compile: function(text) { //重写模板引擎
+                    return template.compile(text);
+                },
+                template: tHtml
+            });
+            jscroller.pulldown({ //下拉刷新
+                refresh: function(complete) {
+                    $api.dom("#scroller").innerHTML = "";
+                    jscroller.options.page = 1;
+                    loadOrderMessage(1, function(data) {
+                        jscroller.infinite_callback(data); //直接调用上拉加载的方法
+                        complete(); //完成加载
+                    });
+                }
+            });
+            api.addEventListener({
+                name: 'viewdisappear'
+            }, function(ret, err) {
+                api.sendEvent({
+                    name: 'OderMessageBack'
+                });
+            });
+        };
+
+        var loadOrderMessage = function(page, _compile) {
+            showLoading("加载订阅消息");
+            sendPost(ServicesConifg.Message.QuerySubscribeMessage, {
+                pageIndex: page
+            }, function(succ) {
+                if (_compile) { //自定义渲染
+                    if (succ.isLastPage) {
+                        jscroller.options.total = page;
+                    }
+                    _compile(succ.list);
+                    $.each(succ.list, function(i, e) {
+                        if (!e.IsRead) {
+                            sendPost(ServicesConifg.Message.HaveRead, {
+                                id: e.ID
+                            }, function(succ) {}, function(err) {});
+                        }
+                    });
+                }
+                closeLoading();
+            }, function(err) {
+                closeLoading();
+            });
+        };
+
+        var goBuy = function(code) {
+            checkLogin(function() {
+                api.openWin({
+                    name: 'addStrategy',
+                    url: 'addStrategy.html',
+                    pageParam: {
+                        stockCode: code
+                    }
+                });
+
+            });
+
+        };
+    </script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/template" charset="utf-8" id="template">
+        {{if Status == "策略完成"}}
+        <li class="{{if IsRead}}active{{/if}}">
+            <div class="zj-cc">
+                <span class="zj-cc-tit">{{NickName}}</span>
+                <span class="zj-cc-yk" style="float:right;padding-right:10px;"><em class="red">{{Date}}</em></span>
+            </div>
+            <div class="zj-ccxq">
+                <span style="font-size:16px; color:black;">{{StockName}}<i style="font-size:12px; color:gray;">({{StockCode}})</i></span>
+                <span>股票数<i class="color1">{{StockNum}}</i></span>
+                <span>买入价<i class="color1">{{BuyPrice}}</i></span>
+                <span>卖出价<i class="color1">{{SellPrice}}</i></span>
+                <span>策略止盈<i class="red">{{GainPrice}}</i></span>
+                <span>策略止损<i class="green">{{LossPrice}}</i></span>
+                <span>买入时间<i class="color1">{{BuyTime}}</i></span>
+                <span>卖出时间<i class="color1">{{SellTime}}</i></span>
+                <span>策略盈亏<i class="{{if TradeGain > 0}}red{{else if TradeGain < 0}}green{{/if}}">{{TradeGain}}</i></span>
+            </div>
+        </li>
+        {{else}}
+        <li class="{{if IsRead}}active{{/if}}">
+            <div class="zj-cc">
+                <span class="zj-cc-tit">{{NickName}}</span>
+                <span class="zj-cc-yk" style="float:right;padding-right:10px;"><em class="red">{{Date}}</em></span>
+            </div>
+            <div class="zj-ccxq">
+                <span style="font-size:16px; color:black;">{{StockName}}<i style="font-size:12px; color:gray;">({{StockCode}})</i></span>
+                <span>股票数<i class="color1">{{StockNum}}</i></span>
+                <span>买入价<i class="color1">{{BuyPrice}}</i></span>
+                <span>策略止盈<i class="red">{{GainPrice}}</i></span>
+                <span>策略止损<i class="green">{{LossPrice}}</i></span>
+                <span>买入时间<i class="color1">{{BuyTime}}</i></span>
+            </div>
+            <div style="padding:10px;text-align:right;padding-right:30px;">
+                <button class="wcp-btn wcp-btn-pad04 wcp-btn-opcity" onclick="goBuy('{{StockCode}}')">跟买</button></div>
+        </li>
+        {{/if}}
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit" id="header">
+            订阅消息
+        </div>
+    </div>
+    <div class="ui-container" id="wrapper">
+        <div id="scroller" class="zj-cc-con">
+
+        </div>
+    </div>
+
+</body>
+
+</html>

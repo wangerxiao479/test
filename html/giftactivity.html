@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>我的红包</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <link href="../css/style.css" type="text/css" rel="stylesheet">
+
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-lite.2.4.11.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-pulldown.1.0.0.min.js"></script>
+    <script type="text/javascript" src="../script/jroll-infinite.2.2.0.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        var shareUrl = "http://wechat.cnzjcf.com/Home/Envelope?code=";
+        var shareTitle = "领取红包";
+        var shareDescription = "你的好友发了一个红包,红包可以抵实盘资金。赶来领取吧！！！";
+        var shareImage = "widget://images/wxShare.jpg";
+
+        var pageIndex = 1;
+        var jscroller; //滑动对象
+        var id = 0;
+        _apiready = function() {
+
+            template.helper("format", function(jsondate) {
+                if (jsondate != null) {
+                    jsondate = jsondate.replace("/Date(", "").replace(")/", "");
+                    if (jsondate.indexOf("+") > 0) {
+                        jsondate = jsondate.substring(0, jsondate.indexOf("+"));
+                    } else if (jsondate.indexOf("-") > 0) {
+                        jsondate = jsondate.substring(0, jsondate.indexOf("-"));
+                    }
+
+                    var date = new Date(parseInt(jsondate, 10));
+                    var month = date.getMonth() + 1 < 10 ? "0" + (date.getMonth() + 1) : date.getMonth() + 1;
+                    var currentDate = date.getDate() < 10 ? "0" + date.getDate() : date.getDate();
+
+                    return date.getFullYear() + "-" + month + "-" + currentDate;
+                } else {
+                    return "";
+                }
+            });
+
+            jscroller = new JRoll("#wrapper");
+            var tHtml = $("#templateCoucher").html(); // 加载模板
+            jscroller.infinite({ //上拉加载
+                getData: function(page, callback, errorCallback) {
+                    loadActivity(page, function(data) {
+                        callback(data);
+                    });
+                },
+                compile: function(text) { //重写模板引擎
+                    return template.compile(text);
+                },
+                template: tHtml
+            });
+            jscroller.pulldown({ //下拉刷新
+                refresh: function(complete) {
+                    $api.dom("#actionList").innerHTML = "";
+                    jscroller.options.page = 1;
+                    loadActivity(1, function(data) {
+                        jscroller.infinite_callback(data); //直接调用上拉加载的方法
+                        complete(); //完成加载
+                    });
+                }
+            });
+        };
+        var loadActivity = function(page, _compile) {
+            sendPost(ServicesConifg.Account.QueryTicketActivity, {
+                pageSize: 10,
+                pageIndex: page
+            }, function(succ) {
+                if (_compile) { //自定义渲染
+                    if (succ.isLastPage) {
+                        jscroller.options.total = page;
+                    }
+                    _compile(succ.List);
+                }
+            }, function(err) {
+
+            });
+        };
+
+        var goEnvelope = function(_id, code, title) {
+            shareUrl = 'http://wechat.cnzjcf.com/Home/Envelope?code=' + code;
+            shareTitle = title;
+            id = _id;
+            $(".share_panel").addClass("s_show");
+            $(".mask").show();
+        }
+
+
+        var shareWeixin = function() {
+            var wx = api.require("wx");
+            wx.isInstalled(function(ret, err) {
+                if (ret.installed) {
+                    wx.shareWebpage({
+                        scene: 'session',
+                        title: shareTitle,
+                        description: shareDescription,
+                        thumb: shareImage,
+                        contentUrl: shareUrl
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            showToast('分享成功');
+                            sendPost(ServicesConifg.Account.ShareTicketActivity, {
+                                id: id
+                            }, function(succ) {
+                            }, function(err) {
+                            });
+                        } else {
+                            showToast('取消分享');
+                        }
+                    });
+                } else {
+                    showToast('当前设备未安装微信客户端');
+                }
+            });
+        };
+
+        var shareWeixinFrd = function() {
+            var wx = api.require("wx");
+            wx.isInstalled(function(ret, err) {
+                if (ret.installed) {
+                    wx.shareWebpage({
+                        scene: 'timeline',
+                        title: shareTitle,
+                        description: shareDescription,
+                        thumb: shareImage,
+                        contentUrl: shareUrl
+                    }, function(ret, err) {
+                        if (ret.status) {
+                            showToast('分享成功');
+                            sendPost(ServicesConifg.Account.ShareTicketActivity, {
+                                id: id
+                            }, function(succ) {
+                            }, function(err) {
+                            });
+                        } else {
+                            showToast('取消分享');
+                        }
+                    });
+
+                } else {
+                    showToast('当前设备未安装微信客户端');
+                }
+            });
+
+        };
+    </script>
+    <style type="text/css">
+        #wrapper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #f8f8f8;
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+    <script type="text/template" charset="utf-8" id="templateCoucher">
+        <li class="share">
+            {{if Status=="未使用"}}
+            <div onclick="goEnvelope({{Id}},'{{Code}}','{{Name}}')">
+                {{/if}}
+                <div class="vou-mo">
+                    <img src="../images/voucher1.png">
+                    <div class="vou-money">
+                        <span class="vou-money-tit"><i>￥</i>{{Money}}</span>
+                        <span class="vou-money-sm">满{{LowMoney}}使用</span>
+
+                    </div>
+                </div>
+                <span class="vou-tit">{{Name}}</span>
+                <span class="vou-time">{{AddTime}}-{{EndTime}}</span>
+                <span class="vou-sm">{{Mark}}</span> {{if Status=="已使用"}}
+                <p class="vou-zt vou-ysy"></p>
+                {{else if Status=="已过期"}}
+                <p class="vou-zt vou-ygq"></p>
+                {{/if}} {{if Status=="未使用"}}
+            </div> {{/if}}
+        </li>
+    </script>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            我的红包
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div id="wrapper" class="ui-container">
+        <!-- tab -->
+        <ul id="actionList" class="vou-con"></ul>
+    </div>
+
+    <!-- 隐藏信息-分享 -->
+    <div class="share_panel">
+        <h2>分享到</h2>
+        <ul>
+            <li onclick="shareWeixin()">
+                <a href="#">
+                    <img src="../images/btn_share_wx.png">
+                    <span>微信</span>
+                </a>
+            </li>
+            <li onclick="shareWeixinFrd()">
+                <a href="#">
+                    <img src="../images/btn_share_pyq.png">
+                    <span>朋友圈</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <!-- 遮罩层  -->
+    <div class="mask"></div>
+
+</body>
+
+</html>

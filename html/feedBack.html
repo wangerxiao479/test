@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>问题反馈</title>
+    <link href="../css/common.css" type="text/css" rel="stylesheet">
+    <link href="../fontico/iconfont.css" rel="stylesheet" type="text/css">
+    <link href="../css/my.css" type="text/css" rel="stylesheet">
+    <!--核心模块-->
+    <script type="text/javascript" src="../script/api.js"></script>
+    <script type="text/javascript" src="../script/app.js"></script>
+    <script type="text/javascript" src="../js/jquery.min.js"></script>
+    <script type="text/javascript" src="../js/fastclick.js"></script>
+    <!--通用组件-->
+    <script type="text/javascript" src="../js/main.js"></script>
+    <script type="text/javascript" src="../js/swiper.min.js"></script>
+    <!--通信组件-->
+    <script type="text/javascript" src="../script/core-min.js"></script>
+    <script type="text/javascript" src="../script/aes.js"></script>
+    <script type="text/javascript" src="../script/secret.js"></script>
+    <script type="text/javascript" src="../script/cacheAjax.js"></script>
+    <script type="text/javascript" src="../script/artTemplate.js"></script>
+    <script type="text/javascript">
+        _apiready = function() {
+            var user = getUserInfo();
+            $api.dom("#userName").value = user.NickName
+        };
+        var feedback = function() {
+            var userProblem = $api.dom("#userProblem").value;
+            if (userProblem.length == 0) {
+                showToast("请输入要反馈的问题");
+                return false;
+            }
+            showLoading();
+            sendPost(ServicesConifg.Account.Feedback, {
+                    content: userProblem
+                },
+                function(data) {
+                    closeLoading();
+                    showToast("提交成功", function() {
+                        api.closeWin();
+                    });
+                },
+                function(err) {
+                    closeLoading();
+                    showToast("提交失败");
+                }
+
+            );
+        };
+    </script>
+    <style>
+        textarea {
+            border: none;
+            font-size: 1rem;
+            width: 100%;
+            line-height: 1.5rem;
+            padding-top: .85rem;
+        }
+
+        .wcp-dl dt {
+            width: 21%;
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back" onclick="javascript:api.closeWin();">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            问题反馈
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+    <div class="ui-container">
+        <!-- con -->
+        <div class="wcp-second-box wcp-dl">
+            <dl>
+                <dd><input id="userName" type="text" placeholder="请输入姓名" readonly="readonly" /></dd>
+            </dl>
+            <dl>
+                <dd>
+                    <textarea name="userProblem" id="userProblem" style="width:100%;" rows="10" placeholder="请输入问题描述"></textarea>
+                </dd>
+            </dl>
+        </div>
+
+        <a href="#">
+            <div class="fill-btn"><button class="wcp-btn wcp-btn-pad03 wcp-btn-red" onclick="feedback()">提交</button></div>
+        </a>
+    </div>
+</body>
+
+</html>

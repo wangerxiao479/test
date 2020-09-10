@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>登录微操盘</title>
+    <link href="css/common.css" type="text/css" rel="stylesheet" />
+    <link href="fontico/iconfont.css" rel="stylesheet" type="text/css" />
+    <style type="text/css">
+        #btnSms:disabled {
+            color: gray;
+            border-color: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- header -->
+    <div class="header">
+        <a href="#" class="back">
+            <i class="arrow_left"></i>
+        </a>
+        <div class="search_box nei_tit">
+            注册
+        </div>
+        <!--  <a class="right-ico tel" href="tel:400-000-0000"></a> -->
+    </div>
+
+    <div class="ui-container">
+        <!-- top-up -->
+        <div class="nreg-img"><img src="images/reg_01.jpg"></div>
+        <div class="nreg-bg">
+            <div class="nreg-dl">
+                <dl>
+                    <dt>手机号码</dt>
+                    <dd><input id="userPhone" type="text" readonly="readonly" /></dd>
+                </dl>
+                <dl>
+                    <dt>姓名</dt>
+                    <dd><input id="realName" type="text" placeholder="请输入姓名" /></dd>
+                </dl>
+                <dl>
+                    <dt>验 证  码</dt>
+                    <dd>
+                        <input id="validateCode" type="text" placeholder="请输入数字验证码" />
+                        <img id="verifyCode" src="#" class="wcp-yz" onclick="queryKey()" />
+                    </dd>
+                </dl>
+                <dl>
+                    <dt>短信验证</dt>
+                    <dd>
+                        <input id="smsCode" type="text" placeholder="请输入短信验证码" />
+                        <span class="reg-yz" id="btnSms" onclick="sendSms()">点击获取验证码</span>
+                    </dd>
+                </dl>
+                <dl>
+                    <dt>登录密码</dt>
+                    <dd>
+                        <input id="userPassword" type="password" placeholder="请输入登录密码" />
+                        <div id="show" class="eye-close"></div>
+                    </dd>
+                </dl>
+                <dl>
+                    <dt>确认密码</dt>
+                    <dd>
+                        <input id="userPassword1" type="password" placeholder="请再次输入登录密码" />
+                    </dd>
+                </dl>
+                <dl>
+                    <dt>推荐邀请码</dt>
+                    <dd><input id="userGroomPhone" type="text" placeholder="请输入推荐人邀请码或手机号" /></dd>
+                </dl>
+            </div>
+            <div class="nreg-btn"><button id="submit" onclick="registerSubmit()" class="wcp-btn wcp-btn-pad03 wcp-btn-red">立即申请</button></div>
+            <p class="nreg-xy"><input type="checkbox" id="chkbtn" />同意<i onclick='gopact()'>用户注册协议</i></p>
+        </div>
+</body>
+
+</html>
+<!--核心模块-->
+<script type="text/javascript" src="script/api.js"></script>
+<script type="text/javascript" src="script/app.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script type="text/javascript" src="js/fastclick.js"></script>
+<!--通用组件-->
+<script type="text/javascript" src="js/main.js"></script>
+<!--通信组件-->
+<script type="text/javascript" src="script/core-min.js"></script>
+<script type="text/javascript" src="script/aes.js"></script>
+<script type="text/javascript" src="script/secret.js"></script>
+<script type="text/javascript" src="script/cacheAjax.js"></script>
+
+<script type="text/javascript">
+    var loadId;
+    _apiready = function() {
+        //$api.fixStatusBar( $api.dom('header') );//发布正式版本后去除
+        api.setStatusBarStyle({
+            style: 'light',
+            color: "#f40303"
+        });
+        showLoading();
+
+        $api.dom("#userPhone").value = api.pageParam.userPhone;
+        //查询验证码
+        queryKey(function() {
+            closeLoading();
+        });
+    };
+
+    function gopact() {
+        sendPost(ServicesConifg.Account.RegistPact, {}, function(succ) {
+            api.openWin({
+                name: 'agreementDes',
+                url: 'html/agreementDes.html',
+                pageParam: {
+                    content: succ.content,
+                    title: succ.title
+                }
+            });
+        }, function(err) {});
+    };
+    $("#show").click(function() {
+        $("#show").toggleClass("eye-open");
+        if ($("#show").hasClass("eye-open")) {
+            $("#userPassword").attr("type", "text");
+        } else {
+            $("#userPassword").attr("type", "password");
+        }
+    });
+
+    var queryKey = function(end) {
+        var userPhone = $api.dom("#userPhone").value;
+        sendPost(ServicesConifg.Account.QueryValidateCode, {
+            userPhone: userPhone
+        }, function(succ) {
+            $api.dom("#verifyCode").src = "data:image/jpeg;base64," + succ;
+            if (end) {
+                end();
+            }
+        }, function(err) {
+            if (end) {
+                end();
+            }
+        }, false);
+    };
+
+    var sendSms = function() {
+        var userPhone = $api.dom("#userPhone").value;
+        var validateCode = $api.dom("#validateCode").value;
+
+
+        if (userPhone == "" || userPhone == null) {
+            showToast("请输入手机号码");
+            return;
+        }
+        if (validateCode == "" || validateCode == null) {
+            showToast("请输入验证码");
+            return;
+        }
+        showLoading("发送短信中");
+
+        // setTimeout(function(){
+        //   showToast("短信发送成功，5分钟内输入有效");
+        //   i = 180;
+        //   statisticsSms();
+        //   closeLoading();
+        // },3000);
+
+        sendPost(ServicesConifg.Account.QuerySMSCode, {
+            userPhone: userPhone,
+            validateCode: validateCode,
+            smsType: 1
+        }, function(succ) {
+            showToast("短信发送成功，5分钟内输入有效");
+            queryKey();
+            i = 180;
+            statisticsSms();
+            closeLoading();
+        }, function(err) {
+            showToast(err);
+            closeLoading();
+        }, false);
+    };
+
+
+    var i = 180;
+
+    function statisticsSms() {
+        if (i > 0) {
+            $("#btnSms").attr("disabled", "disabled");
+            $("#btnSms").html(i + "秒后重新发送");
+            i--;
+            setTimeout(function() {
+                statisticsSms();
+            }, 1000);
+        } else {
+            $("#btnSms").removeAttr("disabled");
+            $("#btnSms").html("重新发送");
+        }
+    }
+
+
+    var registerSubmit = function() {
+
+        var userPhone = $api.dom("#userPhone").value;
+        var realName = $api.dom("#realName").value;
+        var smsCode = $api.dom("#smsCode").value;
+        var userPassword = $api.dom("#userPassword").value;
+        var userPassword1 = $api.dom("#userPassword1").value;
+        var userGroomPhone = $api.dom("#userGroomPhone").value;
+        var chk = $("#chkbtn").is(':checked');
+        if (!chk) {
+            showToast("请同意平台服务协议");
+            return false;
+        }
+        if (userPassword != userPassword1) {
+            showToast("两次输入的密码不一致");
+            return false;
+        }
+        if (realName == "") {
+            showToast("请输入姓名");
+            return false;
+        }
+        showLoading("提交注册中");
+
+        sendPost(ServicesConifg.Account.RegUser, {
+            userPhone: userPhone,
+            realName: realName,
+            smsCode: smsCode,
+            password: userPassword,
+            referrals: userGroomPhone
+        }, function(succ) {
+            closeLoading();
+            showToast("注册成功", function() {
+                api.openWin({
+                    name: 'login',
+                    url: './loginOn.html',
+                    pageParam: {
+                        userPhone: userPhone,
+                        from: "registerOn"
+                    }
+                });
+            });
+        }, function(err) {
+            closeLoading();
+            showToast(err);
+        }, false, true);
+    };
+</script>
