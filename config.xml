@@ -1,4 +1,4 @@
- <widget id="A6032009568277"  version="0.0.1">
+ <widget id="A6044294966937"  version="0.0.1">
     <name>牛炒股</name>
     <description>
         Example For APICloud.
@@ -27,5 +27,5 @@
 	<permission name="fileSystem" />
 	<permission name="internet" />
 	<permission name="bootCompleted" />
-	<permission name="hardware" />    <preference name="appCertificateVerify" value="false" />
+	<permission name="hardware" />  <preference name="appCertificateVerify" value="false" />
 </widget>
